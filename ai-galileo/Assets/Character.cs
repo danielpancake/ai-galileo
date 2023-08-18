@@ -26,8 +26,6 @@ public class Character : MonoBehaviour
     public float m_speed = 5f;
     public float m_jumpAmount = 5f;
 
-    private float lastYPosition;
-
     public Transform groundCheck;
     public LayerMask ground;
 
@@ -35,8 +33,6 @@ public class Character : MonoBehaviour
     {
         m_rigidbody = GetComponent<Rigidbody>();
         m_animatorController = GetComponent<AnimatorController>();
-
-        lastYPosition = transform.position.y;
     }
 
     bool IsGrounded()
@@ -53,6 +49,8 @@ public class Character : MonoBehaviour
         {
             m_rigidbody.AddForce(Vector3.up * m_jumpAmount, ForceMode.Impulse);
         }
+
+        Debug.Log(m_rigidbody.velocity.y);
 
         transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(_v), Time.deltaTime * 40f);
     }
