@@ -341,6 +341,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -730543365766217390, guid: 4d91dda2a2ba95944a73f0e3891e01d1, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 5d5e40f2c19adcb479f83c4874363cc0, type: 2}
     - target: {fileID: 919132149155446097, guid: 4d91dda2a2ba95944a73f0e3891e01d1, type: 3}
       propertyPath: m_Name
       value: Pushnoy
@@ -674,7 +678,7 @@ Transform:
   m_GameObject: {fileID: 1648375643}
   serializedVersion: 2
   m_LocalRotation: {x: 0.012406129, y: -0.9059172, z: 0.42243615, w: 0.026605103}
-  m_LocalPosition: {x: 0, y: 3, z: 0}
+  m_LocalPosition: {x: -1.133, y: 2.995, z: 0.073}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
