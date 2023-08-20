@@ -1,7 +1,3 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using UnityEditor.Animations;
 using UnityEngine;
 
 enum AnimationState
@@ -18,16 +14,31 @@ enum AnimationState
 
 public class Character : MonoBehaviour
 {
-    private Rigidbody m_rigidbody;
-    private Animator m_animator;
-
-    private AnimationState m_animationState = AnimationState.Idle;
-
-    public float m_maxSpeed = 10f;
-    public float m_jumpAmount = 5f;
+    private Rigidbody rb;
+    private Animator animator;
 
     public Transform groundCheck;
     public LayerMask ground;
+
+    // Movement speed
+    public float walkSpeed = 8f;
+    public float runSpeed = 12f;
+    public float sprintSpeed = 15f;
+
+    public float jumpAmount = 5f;
+
+    public float acceleration = 5f;
+
+    private float currentSpeed;
+
+    // Input keyboard
+    private float verticalInput;
+    private float horizontalInput;
+
+    private bool has_jumped = false;
+
+    // Animation handler
+    private AnimationState animationState = AnimationState.Idle;
 
     public RuntimeAnimatorController anim_fall;
     public RuntimeAnimatorController anim_idle;
@@ -38,12 +49,12 @@ public class Character : MonoBehaviour
     public RuntimeAnimatorController anim_talk;
     public RuntimeAnimatorController anim_walk;
 
-    private bool has_jumped = false;
-
     void Start()
     {
-        m_rigidbody = GetComponent<Rigidbody>();
-        m_animator = GetComponent<Animator>();
+        rb = GetComponent<Rigidbody>();
+        animator = GetComponent<Animator>();
+
+        currentSpeed = walkSpeed;
     }
 
     bool IsGrounded()
@@ -53,8 +64,21 @@ public class Character : MonoBehaviour
 
     void Update()
     {
-        Vector3 _v = new(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical"));
-        m_rigidbody.MovePosition(transform.position + _v * Time.deltaTime * m_maxSpeed);
+        verticalInput = Input.GetAxis("Vertical");
+        horizontalInput = Input.GetAxis("Horizontal");
+
+        Vector3 input = new(horizontalInput, 0, verticalInput);
+        input.Normalize();
+
+        if (input.magnitude > 0)
+        {
+            currentSpeed = Mathf.MoveTowards(currentSpeed, sprintSpeed, acceleration * Time.deltaTime);
+            rb.rotation = Quaternion.Slerp(rb.rotation, Quaternion.LookRotation(input), Time.deltaTime * 40f);
+        }
+        else
+        {
+            currentSpeed = walkSpeed;
+        }
 
         if (IsGrounded())
         {
@@ -62,63 +86,59 @@ public class Character : MonoBehaviour
 
             if (Input.GetKeyDown(KeyCode.Space))
             {
-                m_rigidbody.AddForce(Vector3.up * m_jumpAmount, ForceMode.Impulse);
+                rb.AddForce(Vector3.up * jumpAmount, ForceMode.Impulse);
                 has_jumped = true;
             }
         }
 
-        if (_v.magnitude != 0)
-        {
-            m_rigidbody.rotation = Quaternion.Slerp(m_rigidbody.rotation, Quaternion.LookRotation(_v), Time.deltaTime * 40f);
-        }
+        rb.MovePosition(transform.position + input * Time.deltaTime * currentSpeed);
 
         UpdateAnimationState();
-        SetAnimation(m_animationState);
+        SetAnimation(animationState);
     }
 
     void UpdateAnimationState()
     {
         if (IsGrounded())
         {
-            float _m = m_rigidbody.velocity.magnitude;
-            if (_m > .75f)
+            if (currentSpeed >= sprintSpeed)
             {
-                m_animationState = AnimationState.Run;
+                animationState = AnimationState.Sprint;
             }
-            else if (_m > .5f)
+            else if (currentSpeed > runSpeed)
             {
-                m_animationState = AnimationState.Sprint;
+                animationState = AnimationState.Run;
             }
-            else if (_m > .25f)
+            else if (currentSpeed > walkSpeed)
             {
-                m_animationState = AnimationState.Walk;
+                animationState = AnimationState.Walk;
             }
             else
             {
-                m_animationState = AnimationState.Idle;
+                animationState = AnimationState.Idle;
             }
         }
         else
         {
-            m_animationState = has_jumped ? AnimationState.Fall : AnimationState.Jump;
+            animationState = has_jumped ? AnimationState.Fall : AnimationState.Jump;
         }
     }
 
     void SetAnimation(AnimationState state)
     {
-        RuntimeAnimatorController _a = anim_idle;
+        RuntimeAnimatorController curr_anim = anim_idle;
         switch (state)
         {
-            case AnimationState.Fall: _a = anim_jump; break;
-            case AnimationState.Idle: _a = anim_idle; break;
-            case AnimationState.Jump: _a = anim_fall; break;
-            case AnimationState.Run: _a = anim_run; break;
-            case AnimationState.Sprint: _a = anim_sprint; break;
-            case AnimationState.Strafe: _a = anim_strafe; break;
-            case AnimationState.Talk: _a = anim_talk; break;
-            case AnimationState.Walk: _a = anim_walk; break;
+            case AnimationState.Fall: curr_anim = anim_jump; break;
+            case AnimationState.Idle: curr_anim = anim_idle; break;
+            case AnimationState.Jump: curr_anim = anim_fall; break;
+            case AnimationState.Run: curr_anim = anim_run; break;
+            case AnimationState.Sprint: curr_anim = anim_sprint; break;
+            case AnimationState.Strafe: curr_anim = anim_strafe; break;
+            case AnimationState.Talk: curr_anim = anim_talk; break;
+            case AnimationState.Walk: curr_anim = anim_walk; break;
         }
 
-        m_animator.runtimeAnimatorController = _a;
+        animator.runtimeAnimatorController = curr_anim;
     }
 }
