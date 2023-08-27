@@ -67,7 +67,7 @@ public class Character : MonoBehaviour
         verticalInput = Input.GetAxis("Vertical");
         horizontalInput = Input.GetAxis("Horizontal");
 
-        Vector3 input = new(horizontalInput, 0, verticalInput);
+        Vector3 input = new (horizontalInput, 0, verticalInput);
         input.Normalize();
 
         if (input.magnitude > 0)
