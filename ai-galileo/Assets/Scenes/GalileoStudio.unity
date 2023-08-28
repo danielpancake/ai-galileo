@@ -149,9 +149,9 @@ MonoBehaviour:
   ground:
     serializedVersion: 2
     m_Bits: 8
-  walkSpeed: 8
-  runSpeed: 12
-  sprintSpeed: 15
+  walkSpeed: 10
+  runSpeed: 25
+  sprintSpeed: 50
   jumpAmount: 5
   acceleration: 5
   anim_fall: {fileID: 9100000, guid: 441942176ee9a724b9afe936d1d03496, type: 2}
@@ -441,7 +441,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 9a673d8f238e09743870fdecf28b5454, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.544
+      value: 0.58
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 9a673d8f238e09743870fdecf28b5454, type: 3}
       propertyPath: m_LocalPosition.z
