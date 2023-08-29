@@ -21,9 +21,9 @@ public class Character : MonoBehaviour
     public LayerMask ground;
 
     // Movement speed
-    public float walkSpeed = 8f;
-    public float runSpeed = 12f;
-    public float sprintSpeed = 15f;
+    public float walkSpeed = 10f;
+    public float runSpeed = 25f;
+    public float sprintSpeed = 50f;
 
     public float jumpAmount = 5f;
 
@@ -34,6 +34,8 @@ public class Character : MonoBehaviour
     // Input keyboard
     private float verticalInput;
     private float horizontalInput;
+
+    private Vector3 target;
 
     private bool has_jumped = false;
 
@@ -55,6 +57,8 @@ public class Character : MonoBehaviour
         animator = GetComponent<Animator>();
 
         currentSpeed = walkSpeed;
+
+        target = rb.position;
     }
 
     bool IsGrounded()
@@ -64,8 +68,29 @@ public class Character : MonoBehaviour
 
     void Update()
     {
-        verticalInput = Input.GetAxis("Vertical");
-        horizontalInput = Input.GetAxis("Horizontal");
+        if (Input.GetMouseButtonDown(1))
+        {
+            Ray movePosition = Camera.main.ScreenPointToRay(Input.mousePosition);
+            if (Physics.Raycast(movePosition, out var hitInfo))
+            {
+                target = hitInfo.point;
+            }
+        }
+
+        verticalInput = target.z - rb.position.z;
+        if (Mathf.Abs(verticalInput) < 0.1f)
+        {
+            verticalInput = 0;
+        }
+
+        horizontalInput = target.x - rb.position.x;
+        if (Mathf.Abs(horizontalInput) < 0.1f)
+        {
+            horizontalInput = 0;
+        }
+
+        // verticalInput = Input.GetAxis("Vertical");
+        // horizontalInput = Input.GetAxis("Horizontal");
 
         Vector3 input = new (horizontalInput, 0, verticalInput);
         input.Normalize();
