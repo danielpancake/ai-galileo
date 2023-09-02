@@ -2,10 +2,13 @@ certifi==2023.7.22
 cffi==1.15.1
 charset-normalizer==3.2.0
 claude-api==1.0.17
+colorama==0.4.6
 curl-cffi==0.5.7
 idna==3.4
+loguru==0.7.0
 pycparser==2.21
 python-dotenv==1.0.0
 requests==2.31.0
 toml==0.10.2
 urllib3==2.0.4
+win32-setctime==1.1.0

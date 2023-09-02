@@ -1,15 +1,23 @@
 from claude_api import Client
 from dotenv import load_dotenv
+from loguru import logger
 from typing import List, Tuple, Dict, Any
 
 import os
 import re
 import toml
 
+load_dotenv()
+
 
 class StoryContext:
     def __init__(self):
-        self.claude_client = Client(os.environ.get("COOKIE"))
+        cookie = os.environ.get("COOKIE")
+
+        if not cookie:
+            raise Exception("No COOKIE env variable provided.")
+
+        self.claude_client = Client(cookie)
         self.story_id = None
 
     def __enter__(self):
@@ -80,12 +88,42 @@ def parse_story(story_text: str) -> list:
 
 
 def generate_full_story(config, theme: str) -> dict:
-    pass
+    promps_section = config["prompts"]
+
+    config["theme"] = theme
+
+    prompt_story = toml_interpolate(promps_section["story_prompt"], config)
+    prompt_pre_story = toml_interpolate(promps_section["pre_story_prompt"], config)
+    prompt_post_story = toml_interpolate(promps_section["post_story_prompt"], config)
+
+    r = {
+        "theme": theme,
+    }
+
+    with StoryContext() as ctx:
+        logger.info(f"Story ID: {ctx.story_id}")
+        r["story"] = ctx.claude_client.send_message(
+            prompt_story, ctx.story_id, timeout=600
+        )
+        logger.info("Generated story")
+        r["pre_story"] = ctx.claude_client.send_message(
+            prompt_pre_story, ctx.story_id, timeout=600
+        )
+        logger.info("Generated pre_story")
+        r["post_story"] = ctx.claude_client.send_message(
+            prompt_post_story, ctx.story_id, timeout=600
+        )
+        logger.info("Generated post_story")
+
+    return r
 
 
-# load_dotenv()
+config = toml.load("director.toml")
 
-# config = toml.load("director.toml")
+print(generate_full_story(config, "Как работают нейронные сети?"))
+
+
+#
 # claude_api = Client(os.environ.get("COOKIE"))
 
 # theme = "Зачем нужны шишки"
