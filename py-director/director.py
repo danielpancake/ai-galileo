@@ -1,5 +1,6 @@
 from claude_api import Client
 from dotenv import load_dotenv
+from typing import List, Tuple, Dict, Any
 
 import os
 import re
@@ -19,6 +20,27 @@ class StoryContext:
     def __exit__(self, exc_type, exc_value, traceback):
         self.claude_client.delete_conversation(self.story_id)
         self.story_id = None
+
+
+def toml_interpolate(string: str, config: dict) -> str:
+    """Interpolate TOML string with config variables."""
+    interpolation_candidates = re.findall(r"\%(.+?)\%", string)
+
+    for candidate in interpolation_candidates:
+        path = candidate.split("/")
+        value = config
+
+        for key in path:
+            if key in value:
+                value = value[key]
+            else:
+                value = None
+                break
+
+        if value:
+            string = string.replace(f"%{candidate}%", value)
+
+    return string
 
 
 def parse_story(story_text: str) -> list:
@@ -57,17 +79,9 @@ def parse_story(story_text: str) -> list:
     return script
 
 
-# def generate_story(config, theme: str) -> str:
-#   """Generate a story based on a theme."""
-#   prompt = theme
+def generate_full_story(config, theme: str) -> dict:
+    pass
 
-#   claude_client = config["claude_client"]
-
-#   story_generator = claude_client.create_new_chat()
-#   story_id = story_generator["uuid"]
-
-#   response = claude_client.send_message(prompt, story_id, timeout=600)
-#   return response
 
 # load_dotenv()
 
