@@ -1,4 +1,13 @@
+import os
+import platform
 import re
+
+
+class StatusCodes:
+    ADDED = "added"
+    QUEUED = "queued"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 
 def toml_interpolate(string: str, configs: list) -> str:
@@ -23,3 +32,16 @@ def toml_interpolate(string: str, configs: list) -> str:
                 break
 
     return string
+
+
+def run_in_terminal(command: str):
+    """Run command in terminal."""
+    match platform.system():
+        case "Windows":
+            os.system(f"start cmd /c {command}")
+
+        case "Linux":
+            os.system(f"sh -c {command}")
+
+        case _:
+            raise NotImplementedError("Unsupported platform")

@@ -1,7 +1,8 @@
 from director import generate_full_story
 from dotenv import load_dotenv
 from loguru import logger
-from pymongo import MongoClient
+from pymongo import MongoClient, errors
+from utils import StatusCodes, run_in_terminal
 
 from redis import Redis
 from rq import Queue
@@ -16,36 +17,58 @@ import toml
 
 load_dotenv()
 
-QUEUE_STORIES = "stories"
+QUEUE_STORIES_BASENAME = "stories"
+QUEUE_STORIES_COUNT = 3
 
 
-class StatusCodes:
-    ADDED = "added"
-    QUEUED = "queued"
-    COMPLETED = "completed"
-    FAILED = "failed"
-
-
-if __name__ == "__main__":
+def setup_args():
+    """Setup command line arguments."""
     parser = argparse.ArgumentParser(
         prog="ai-galileo",
         description="AI Galileo is a chatbot that generates stories based on user-submitted topics.",
     )
     parser.add_argument("--clean", help="Clean the database", action="store_true")
     parser.add_argument("--verbose", help="Verbose logging", action="store_true")
+    parser.add_argument("--rq", help="Run RQ workers", action="store_true")
 
-    args = parser.parse_args()
+    return parser.parse_args()
 
-    # Setup Redis queue
-    q_stories = Queue(QUEUE_STORIES, connection=Redis())
+
+if __name__ == "__main__":
+    args = setup_args()
+
+    # Start RQ workers
+    if args.rq:
+        for i in range(QUEUE_STORIES_COUNT):
+            run_in_terminal(f"python worker.py {QUEUE_STORIES_BASENAME}{i}")
+
+            if args.verbose:
+                logger.info(f"Started worker for {QUEUE_STORIES_BASENAME}{i}")
+
+    # Setup Redis queues
+    q_stories_list = [
+        Queue(f"{QUEUE_STORIES_BASENAME}{i}", connection=Redis())
+        for i in range(QUEUE_STORIES_COUNT)
+    ]
+    q_stories_current = 0
+
     topics_jobs = []
 
-    # Setup MongoDB
-    mongo_client = MongoClient(os.environ.get("MONGO_URI"))
+    try:
+        # Setup MongoDB
+        mongo_client = MongoClient(os.environ.get("MONGO_URI"))
+        mongo_client.server_info()
+    except errors.ServerSelectionTimeoutError as err:
+        logger.error(err)
+        exit(1)
+
+    if args.verbose:
+        logger.info("Connected to MongoDB")
+
     db = mongo_client["ai-galileo"]
 
+    # Clear submission topics and stories from previous runs
     if args.clean:
-        # Clear submission topics and stories from previous runs
         db["submission_topics"].delete_many({})
         db["stories"].delete_many({})
 
@@ -78,6 +101,9 @@ if __name__ == "__main__":
 
         # Process new topics
         for topic in db["submission_topics"].find({"status": StatusCodes.ADDED}):
+            q_stories = q_stories_list[q_stories_current]
+            q_stories_current = (q_stories_current + 1) % QUEUE_STORIES_COUNT
+
             job = q_stories.enqueue(
                 generate_full_story,
                 args=(director_config, topic["theme"]),
