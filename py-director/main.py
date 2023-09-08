@@ -144,7 +144,7 @@ if __name__ == "__main__":
 
             match job.get_status():
                 case JobStatus.FINISHED:
-                    job_result = job.return_value
+                    job_result = job.result
 
                     # Update status
                     db["submission_topics"].update_one(
