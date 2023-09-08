@@ -15,10 +15,7 @@ import re
 import toml
 
 
-load_dotenv()
-
 QUEUE_STORIES_BASENAME = "stories"
-QUEUE_STORIES_COUNT = 3
 
 
 def setup_args():
@@ -29,17 +26,25 @@ def setup_args():
     )
     parser.add_argument("--clean", help="Clean the database", action="store_true")
     parser.add_argument("--verbose", help="Verbose logging", action="store_true")
-    parser.add_argument("--rq", help="Run RQ workers", action="store_true")
+    parser.add_argument("--rq-start", help="Run RQ workers", action="store_true")
+    parser.add_argument("--rq-count", help="Number of RQ workers", type=int, default=3)
+    parser.add_argument(
+        "--local-theme",
+        help="Generate a story locally. Disables YouTube chat listener",
+        type=str,
+        default=None,
+    )
 
     return parser.parse_args()
 
 
 if __name__ == "__main__":
+    load_dotenv()
     args = setup_args()
 
     # Start RQ workers
-    if args.rq:
-        for i in range(QUEUE_STORIES_COUNT):
+    if args.rq_start:
+        for i in range(args.rq_count):
             run_in_terminal(f"python worker.py {QUEUE_STORIES_BASENAME}{i}")
 
             if args.verbose:
@@ -48,7 +53,7 @@ if __name__ == "__main__":
     # Setup Redis queues
     q_stories_list = [
         Queue(f"{QUEUE_STORIES_BASENAME}{i}", connection=Redis())
-        for i in range(QUEUE_STORIES_COUNT)
+        for i in range(args.rq_count)
     ]
     q_stories_current = 0
 
@@ -76,11 +81,20 @@ if __name__ == "__main__":
     director_config = toml.load("director.toml")
 
     # Setup YouTube chat listener
-    chat = pytchat.create(os.environ.get("STREAM_ID"))
+    if args.local_theme:
+        db["submission_topics"].insert_one(
+            {
+                "theme": args.local_theme,
+                "requested_by": "admin",
+                "status": StatusCodes.ADDED,
+            }
+        )
+    else:
+        chat = pytchat.create(os.environ.get("STREAM_ID"))
 
     while True:
         # Poll chat for new topic submissions
-        if chat.is_alive():
+        if not args.local_theme and chat.is_alive():
             for c in chat.get().sync_items():
                 if not re.search(r"!topic", c.message):
                     continue
@@ -102,7 +116,7 @@ if __name__ == "__main__":
         # Process new topics
         for topic in db["submission_topics"].find({"status": StatusCodes.ADDED}):
             q_stories = q_stories_list[q_stories_current]
-            q_stories_current = (q_stories_current + 1) % QUEUE_STORIES_COUNT
+            q_stories_current = (q_stories_current + 1) % args.rq_count
 
             job = q_stories.enqueue(
                 generate_full_story,
@@ -118,7 +132,7 @@ if __name__ == "__main__":
             topics_jobs.append(
                 {
                     "_id": topic["_id"],
-                    "job": job,
+                    "job_id": job,
                 }
             )
 
@@ -126,11 +140,11 @@ if __name__ == "__main__":
         finished_jobs = []
 
         for topic_job in topics_jobs:
-            job = topic_job["job"]
+            job = topic_job["job_id"]
 
             match job.get_status():
                 case JobStatus.FINISHED:
-                    job_result = job.return_value()
+                    job_result = job.return_value
 
                     # Update status
                     db["submission_topics"].update_one(
@@ -155,7 +169,7 @@ if __name__ == "__main__":
                     )
 
                     # Mark job for removal
-                    finished_jobs.append(job)
+                    finished_jobs.append(topic_job)
 
                 case _:
                     pass
