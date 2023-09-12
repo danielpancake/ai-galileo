@@ -16,7 +16,7 @@ voice_actor = "ru-RU-DmitryNeural"
 
 
 async def generate(tetx, voice, output_file):
-    communicate = edge_tts.Communicate(tetx, voice)
+    communicate = edge_tts.Communicate(tetx, voice, pitch="+7Hz")
     await communicate.save(output_file)
 
 
@@ -31,6 +31,10 @@ if __name__ == "__main__":
                 for idx, line in enumerate(story[sequence]):
                     match line["type"]:
                         case "text":
+                            text = line["text"]
+                            if not text:
+                                continue
+
                             loop.run_until_complete(
                                 generate(
                                     line["text"],
