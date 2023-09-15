@@ -12,11 +12,11 @@ mongo_client.server_info()
 
 db = mongo_client["ai-galileo"]
 
-voice_actor = "ru-RU-DmitryNeural"
+voice_actor = "ru-RU-SvetlanaNeural"
 
 
 async def generate(tetx, voice, output_file):
-    communicate = edge_tts.Communicate(tetx, voice, pitch="+7Hz")
+    communicate = edge_tts.Communicate(tetx, voice, rate="+12%", pitch="-10Hz")
     await communicate.save(output_file)
 
 
@@ -39,7 +39,7 @@ if __name__ == "__main__":
                                 generate(
                                     line["text"],
                                     voice_actor,
-                                    f"out/{sequence}{idx}.wav",
+                                    f"out/{sequence}{idx}.mp3",
                                 )
                             )
 

@@ -15,11 +15,15 @@ stories = db["stories"].find({})
 
 if __name__ == "__main__":
     for story in stories[:1]:
+        print(f"=== Current story: {story['theme']} ===")
         for sequence in ["pre_story", "story", "post_story"]:
+            print(f"=== Current sequence: {sequence} ===")
             for idx, line in enumerate(story[sequence]):
                 match line["type"]:
                     case "text":
                         print(line["text"])
 
                     case "action":
-                        print(line["action"])
+                        print(f"* {line['action']} *")
+
+            print("")

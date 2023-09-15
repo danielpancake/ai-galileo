@@ -43,13 +43,14 @@ def parse_story(story_text: str) -> list:
         # Remove actions from phrase
         phrase = re.sub(r"\(.*?\)", "", phrase).strip()
 
-        script.append(
-            {
-                "type": "text",
-                "text": phrase,
-                "voice": None,
-            }
-        )
+        if phrase:
+            script.append(
+                {
+                    "type": "text",
+                    "text": phrase,
+                    "voice": None,
+                }
+            )
 
         for action in actions:
             script.append(

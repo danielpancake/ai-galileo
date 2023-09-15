@@ -5,10 +5,8 @@ from pydub import AudioSegment
 
 # Get all files in the output folder
 files = [f for f in listdir("out") if isfile(join("out", f))]
-files = [f for f in files if f.endswith(".wav")]
-
-# Ignore the combined file
-files.remove("combined.wav")
+files = [f for f in files if f.endswith(".mp3")]
+files = [f for f in files if "story" in f]
 
 # Concatenate all files into one
 combined = AudioSegment.empty()

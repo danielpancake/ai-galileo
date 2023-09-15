@@ -15,7 +15,7 @@ with open("out/trim-points.txt", "r") as f:
         print(file, float(trim_point))
 
 # Split the combined file
-combined = AudioSegment.from_file("rvc-out/audio.wav")
+combined = AudioSegment.from_file("rvc-out/audio.mp3")
 
 for idx, (trim_point, file) in enumerate(zip(trim_points, files)):
     # Get the start and end points
@@ -23,4 +23,4 @@ for idx, (trim_point, file) in enumerate(zip(trim_points, files)):
     end = trim_point
 
     # Export the file
-    combined[start * 1000 : end * 1000].export("rvc-out/" + file, format="wav")
+    combined[start * 1000 : end * 1000].export("rvc-out/" + file, format="mp3")
