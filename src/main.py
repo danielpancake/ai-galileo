@@ -78,7 +78,7 @@ if __name__ == "__main__":
         db["stories"].delete_many({})
 
     # Load director config
-    director_config = toml.load("director.toml")
+    director_config = toml.load("prompts.toml")
 
     # Setup YouTube chat listener
     if args.local_theme:
