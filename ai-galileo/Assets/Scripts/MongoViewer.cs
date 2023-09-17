@@ -14,6 +14,13 @@ public class Model_Story
     public string requested_by { set; get; }
 }
 
+public enum StoryPart
+{
+    Pre,
+    Story,
+    Post
+}
+
 public class Model_StoryNode
 {
     public string type { set; get; }
@@ -34,6 +41,7 @@ public class MongoViewer : MonoBehaviour
     private AudioSource audioSource;
 
     private int current_story = 0;
+    private StoryPart current_story_part = StoryPart.Pre;
     private int current_node = 0;
 
 
@@ -61,20 +69,48 @@ public class MongoViewer : MonoBehaviour
     void PlayNextClip()
     {
         Model_Story story = stories[current_story];
-        Model_StoryNode node = story.pre_story[current_node];
+        Model_StoryNode node;
 
-        bool found = false;
+        switch (current_story_part)
+        {
+            default:
+            case StoryPart.Pre:
+                node = story.pre_story[current_node];
+                break;
+            case StoryPart.Story:
+                node = story.story[current_node];
+                break;
+            case StoryPart.Post:
+                node = story.post_story[current_node];
+                break;
+        }
 
-        while (!found)
+        bool next_text_found = false;
+        while (!next_text_found)
         {
             switch (node.type)
             {
                 case "text":
-                    found = true;
+                    next_text_found = true;
                     break;
+
                 default:
                     IncementNode();
-                    node = story.pre_story[current_node];
+                    switch (current_story_part)
+                    {
+                        default:
+                        case StoryPart.Pre:
+                            node = story.pre_story[current_node];
+                            break;
+                        case StoryPart.Story:
+                            node = story.story[current_node];
+                            break;
+                        case StoryPart.Post:
+                            node = story.post_story[current_node];
+                            break;
+                    }
+
+                    // TODO: prevent infinite loop
                     break;
             }
         }
@@ -102,11 +138,42 @@ public class MongoViewer : MonoBehaviour
     {
         current_node += 1;
 
-        // Check if we are at the end of the story
-        if (current_node >= stories[current_story].pre_story.Count)
+        // Check if we are at the end of the current story part
+        List<Model_StoryNode> current_story_part_list;
+
+        switch (current_story_part)
         {
-            current_story += 1;
-            current_node = 0;
+            default:
+            case StoryPart.Pre:
+                current_story_part_list = stories[current_story].pre_story;
+                break;
+            case StoryPart.Story:
+                current_story_part_list = stories[current_story].story;
+                break;
+            case StoryPart.Post:
+                current_story_part_list = stories[current_story].post_story;
+                break;
+        }
+
+
+        if (current_node >= current_story_part_list.Count)
+        {
+            if (current_story_part == StoryPart.Pre)
+            {
+                current_story_part = StoryPart.Story;
+                current_node = 0;
+            }
+            else if (current_story_part == StoryPart.Story)
+            {
+                current_story_part = StoryPart.Post;
+                current_node = 0;
+            }
+            else if (current_story_part == StoryPart.Post)
+            {
+                current_story += 1;
+                current_story_part = StoryPart.Pre;
+                current_node = 0;
+            }
         }
 
         // Check if we are at the end of the stories
@@ -122,6 +189,7 @@ public class MongoViewer : MonoBehaviour
         yield return www;
 
         audioSource.clip = www.GetAudioClip();
+        audioSource.pitch = 2.0f;
         audioSource.Play();
 
         while (GetComponent<AudioSource>().isPlaying)
