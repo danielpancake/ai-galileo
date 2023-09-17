@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using MongoDB.Driver;
 using MongoDB.Bson;
+using TMPro;
+using UnityEngine.UI;
 
 public class Model_Story
 {
@@ -40,10 +42,16 @@ public class MongoViewer : MonoBehaviour
 
     private AudioSource audioSource;
 
-    private int current_story = 0;
+    public GameObject pushnoy;
+
+    private int current_story = 1;
     private StoryPart current_story_part = StoryPart.Pre;
     private int current_node = 0;
 
+    [SerializeField]
+    public GameObject textMeshContainer;
+
+    private TextMeshProUGUI textMesh;
 
     void Start()
     {
@@ -51,6 +59,8 @@ public class MongoViewer : MonoBehaviour
         db = client.GetDatabase(MONGO_DATABASE);
 
         stories = getStories();
+
+        textMesh = textMeshContainer.GetComponent<TextMeshProUGUI>();
 
         PlayNextClip();
     }
@@ -66,24 +76,24 @@ public class MongoViewer : MonoBehaviour
         return db.GetCollection<Model_Story>("stories").Find(_ => true).ToList();
     }
 
-    void PlayNextClip()
+    Model_StoryNode getCurrentNode(Model_Story story)
     {
-        Model_Story story = stories[current_story];
-        Model_StoryNode node;
-
         switch (current_story_part)
         {
             default:
             case StoryPart.Pre:
-                node = story.pre_story[current_node];
-                break;
+                return story.pre_story[current_node];
             case StoryPart.Story:
-                node = story.story[current_node];
-                break;
+                return story.story[current_node];
             case StoryPart.Post:
-                node = story.post_story[current_node];
-                break;
+                return story.post_story[current_node];
         }
+    }
+
+    void PlayNextClip()
+    {
+        Model_Story story = stories[current_story];
+        Model_StoryNode node = getCurrentNode(story);
 
         bool next_text_found = false;
         while (!next_text_found)
@@ -94,21 +104,19 @@ public class MongoViewer : MonoBehaviour
                     next_text_found = true;
                     break;
 
+                case "action":
+                    if (node.action.Contains("прыг"))
+                    {
+                        pushnoy.GetComponent<Character>().Jump();
+                    }
+
+                    IncementNode();
+                    node = getCurrentNode(story);
+                    break;
+
                 default:
                     IncementNode();
-                    switch (current_story_part)
-                    {
-                        default:
-                        case StoryPart.Pre:
-                            node = story.pre_story[current_node];
-                            break;
-                        case StoryPart.Story:
-                            node = story.story[current_node];
-                            break;
-                        case StoryPart.Post:
-                            node = story.post_story[current_node];
-                            break;
-                    }
+                    node = getCurrentNode(story);
 
                     // TODO: prevent infinite loop
                     break;
@@ -119,6 +127,7 @@ public class MongoViewer : MonoBehaviour
         {
             case "text":
                 Debug.Log(node.text);
+                textMesh.text = node.text;
                 if (node.voice != null)
                 {
                     WWW www = GetAudioFromFile(node.voice);
@@ -189,7 +198,7 @@ public class MongoViewer : MonoBehaviour
         yield return www;
 
         audioSource.clip = www.GetAudioClip();
-        audioSource.pitch = 2.0f;
+        audioSource.pitch = 3.0f;
         audioSource.Play();
 
         while (GetComponent<AudioSource>().isPlaying)

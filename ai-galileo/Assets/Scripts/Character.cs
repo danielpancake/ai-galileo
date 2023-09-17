@@ -66,6 +66,14 @@ public class Character : MonoBehaviour
         return Physics.CheckSphere(groundCheck.position, .1f, ground);
     }
 
+    public void Jump()
+    {
+        if (IsGrounded())
+        {
+            rb.AddForce(Vector3.up * jumpAmount, ForceMode.Impulse);
+        }
+    }
+
     void Update()
     {
         if (Input.GetMouseButtonDown(1))
@@ -92,7 +100,7 @@ public class Character : MonoBehaviour
         // verticalInput = Input.GetAxis("Vertical");
         // horizontalInput = Input.GetAxis("Horizontal");
 
-        Vector3 input = new (horizontalInput, 0, verticalInput);
+        Vector3 input = new(horizontalInput, 0, verticalInput);
         input.Normalize();
 
         if (input.magnitude > 0)
@@ -140,7 +148,7 @@ public class Character : MonoBehaviour
             }
             else
             {
-                animationState = AnimationState.Idle;
+                animationState = AnimationState.Talk;
             }
         }
         else
