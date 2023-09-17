@@ -1,6 +1,9 @@
+aiohttp==3.8.5
+aiosignal==1.3.1
 anyio==4.0.0
 arrow==1.2.3
 async-timeout==4.0.3
+attrs==23.1.0
 certifi==2023.7.22
 cffi==1.15.1
 charset-normalizer==3.2.0
@@ -9,7 +12,9 @@ click==8.1.7
 colorama==0.4.6
 curl-cffi==0.5.7
 dnspython==2.4.2
+edge-tts==6.1.8
 exceptiongroup==1.1.3
+frozenlist==1.4.0
 h11==0.14.0
 h2==4.1.0
 hpack==4.0.0
@@ -18,6 +23,7 @@ httpx==0.24.1
 hyperframe==6.0.1
 idna==3.4
 loguru==0.7.0
+multidict==6.0.4
 pycparser==2.21
 pymongo==4.5.0
 pytchat==0.5.5
@@ -26,10 +32,11 @@ python-dotenv==1.0.0
 redis==5.0.0
 requests==2.31.0
 rq==1.15.1
-rq-win @ git+https://github.com/michaelbrooks/rq-win.git@c6e65e38f8a6ca99a0c8e0dd6fe35f9b92837cca # It is important for Windows
+rq-win==0.4.0
 six==1.16.0
 sniffio==1.3.0
 times==0.7
 toml==0.10.2
 urllib3==2.0.4
 win32-setctime==1.1.0
+yarl==1.9.2

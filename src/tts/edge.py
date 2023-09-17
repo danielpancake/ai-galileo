@@ -12,11 +12,11 @@ mongo_client.server_info()
 
 db = mongo_client["ai-galileo"]
 
-voice_actor = "ru-RU-DmitryNeural"
+voice_actor = "ru-RU-SvetlanaNeural"
 
 
 async def generate(tetx, voice, output_file):
-    communicate = edge_tts.Communicate(tetx, voice, rate="+12%", pitch="+20Hz")
+    communicate = edge_tts.Communicate(tetx, voice, rate="+15%", pitch="-18Hz")
     await communicate.save(output_file)
 
 
@@ -26,9 +26,15 @@ stories = db["stories"].find({})
 if __name__ == "__main__":
     loop = asyncio.get_event_loop_policy().get_event_loop()
     try:
-        for story in stories[:1]:
+        for story in stories:
+            story_id = story["_id"]
+
+            # Create output directory
+            os.makedirs(f"out/{story_id}", exist_ok=True)
+
             for sequence in ["pre_story", "story", "post_story"]:
-                for idx, line in enumerate(story[sequence]):
+                idx = 0
+                for line in story[sequence]:
                     match line["type"]:
                         case "text":
                             text = line["text"]
@@ -39,9 +45,11 @@ if __name__ == "__main__":
                                 generate(
                                     line["text"],
                                     voice_actor,
-                                    f"out/{sequence}{idx}.mp3",
+                                    f"out/{story_id}/{sequence}{idx}.mp3",
                                 )
                             )
+
+                            idx += 1
 
                         case _:
                             pass
