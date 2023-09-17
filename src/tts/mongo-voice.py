@@ -16,6 +16,7 @@ db = mongo_client["ai-galileo"]
 story_ids = [f for f in listdir("rvc-out") if not isfile(join("out", f))]
 
 absolute_path = os.path.abspath(os.getcwd())
+absolute_path = absolute_path.replace("\\", "/")
 
 for story_id in story_ids:
     story = db["stories"].find_one({"_id": ObjectId(story_id)})
@@ -23,11 +24,14 @@ for story_id in story_ids:
         # Add voice path to story
         idx = 0
         for line in story[sequence]:
-            if line["type"] == "text":
-                story[sequence][idx][
-                    "voice"
-                ] = f"{absolute_path}/rvc-out/{story_id}/{sequence}{idx}.wav"
-            idx += 1
+            # If line is a string, it's a text line
+            # add voice path
+            match line["type"]:
+                case "text":
+                    line[
+                        "voice"
+                    ] = f"{absolute_path}/rvc-out/{story_id}/{sequence}{idx}.mp3"
+                    idx += 1
 
-    # Update the story
+    # Update story
     db["stories"].update_one({"_id": ObjectId(story_id)}, {"$set": story})
