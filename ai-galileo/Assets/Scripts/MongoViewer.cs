@@ -198,7 +198,7 @@ public class MongoViewer : MonoBehaviour
         yield return www;
 
         audioSource.clip = www.GetAudioClip();
-        audioSource.pitch = 3.0f;
+        // audioSource.pitch = 3.0f;
         audioSource.Play();
 
         while (GetComponent<AudioSource>().isPlaying)
