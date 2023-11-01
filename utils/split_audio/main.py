@@ -1,7 +1,12 @@
 from pydub import AudioSegment
 
-def cut_audio(source, target, cut_from, cut_to):
-    source = AudioSegment.from_mp3(source)
-    source = source[cut_from:cut_to]
-    source.export(target, format="mp3")
+source = None
+
+def load(path):
+    global source
+    source = AudioSegment.from_mp3(path)
+
+def cut_audio(target, cut_from, cut_to):
+    global source
+    source[cut_from:cut_to].export(target, format="wav")
 
