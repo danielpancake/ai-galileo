@@ -15,7 +15,7 @@ logging.basicConfig(format=FORMAT, level=logging.INFO)
 speech_speed = 1.6
 output_file = 'tts-sts.wav'
 model = 'ru_RU-pushnoy-medium'
-text = "Привет дорогие друзья! Вы должны знать как сильно я вас люблю! Вы мои лапочки, солнышки и конечно же сатанисты. Э"
+text = "Привет дорогие друзья!"
 
 
 # Download models
