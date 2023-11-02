@@ -1,2 +1,4 @@
+/.venv
 /.direnv
 /out
+/target
