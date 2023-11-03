@@ -54,8 +54,24 @@ python3 transcribe.py \
 This command will generate file `transcription.txt` with timestamps and transcriptions in original file.
 
 
-### Slicing dataset
-### Converting to ljspeech
+### Slicing the dataset and converting to ljspeech
+
+Now we need to split the source audio file using the generated transcriptions.
+We wrote a Rust program to parse the transcriptions file and for every line it calls a small python script to actually cut the audio.
+
+For this step, make sure you have [Rust](https://www.rust-lang.org) and [ffmpeg](https://www.ffmpeg.org) installed on your system.
+If you have [Nix](https://nixos.org) you can use the flake in the `utils/split_audio` directory via `nix develop` or `direnv allow` to also create an new python venv.
+
+Also make sure to install [pydub](https://github.com/jiaaro/pydub): `python3 -m pip install pydub`
+
+Once you have all the dependencies, you should be able to run the program with cargo by providing paths to the audio file and to the transcription file.
+
+```shell
+cd utils/split_audio
+cargo run -- voice-samples.mp3 transcription.txt
+```
+
+It should generate the output in the `out/` directory with the cut audio in the `audio/` directory and an `ids.csv` file mapping ids (names) of the audio files to their corresponding transcription.
 
 # Preprocessing and training
 
