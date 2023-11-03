@@ -11,8 +11,7 @@ most importantly high-quality text-to-speech (not monotonic / too synthetic).
   * [Environment](#setting-up-environment)
 * [Creating Dataset](#creating-dataset)
   * [Transcribing audio](#transcribing-raw-data)
-  * [Slicing dataset](#slicing-dataset)
-  * [Converting to ljspeech](#converting-to-ljspeech)
+  * [Slicing dataset](#slicing-the-dataset-and-converting-to-ljspeech)
 * [Preprocessing & Training](#preprocessing-and-training)
   * [Preprocessing](#preprocessing)
   * [Download checkpoint](#downloading-pretrained-checkpoint)
@@ -72,6 +71,8 @@ cargo run -- voice-samples.mp3 transcription.txt
 ```
 
 It should generate the output in the `out/` directory with the cut audio in the `audio/` directory and an `ids.csv` file mapping ids (names) of the audio files to their corresponding transcription.
+
+In order to make dataset fully `ljspeech` format, rename `audio/ -> wav/` and  `ids.csv -> metadata.csv`.
 
 # Preprocessing and training
 

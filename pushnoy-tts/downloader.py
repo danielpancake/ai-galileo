@@ -107,7 +107,6 @@ class PiperDownloader(Downloader):
         downloaded_md5 = dict()
         for downloaded in os.listdir(model_dir):
             downloaded_md5[downloaded] = calculate_md5(os.path.join(model_dir, downloaded))
-            print(downloaded_md5[downloaded])
 
         for file, file_desc in model_info['files'].items():
             if any(file.endswith(downloaded_file) and file_desc['md5_digest'] == md5 for downloaded_file, md5 in downloaded_md5.items()):
