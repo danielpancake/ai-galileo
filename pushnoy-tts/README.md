@@ -1,33 +1,35 @@
 # Training custom tts with Piper
 
-This tutorial is made by our team in order to help 
+This tutorial is made by our team in order to help
 reproduce our results of Pushnoy-model. We will use
 [piper-tts](https://github.com/rhasspy/piper/tree/master) model's architecture as it's new, stable, light and
 most importantly high-quality text-to-speech (not monotonic / too synthetic).
 
 ### Navigation
-* [Installation](#installation)
-  * [OS requirements](#os-requirements)
-  * [Environment](#setting-up-environment)
-* [Creating Dataset](#creating-dataset)
-  * [Transcribing audio](#transcribing-raw-data)
-  * [Slicing dataset](#slicing-the-dataset-and-converting-to-ljspeech)
-* [Preprocessing & Training](#preprocessing-and-training)
-  * [Preprocessing](#preprocessing)
-  * [Download checkpoint](#downloading-pretrained-checkpoint)
-  * [Training](#training)
-  * [Testing](#testing-model)
-* [Upload model](#uploading-model-to-hugging-face)
-  * [Exporting model](#exporting-model)
-  * [Piper-styled repository](#setting-up-piper-styled-hierarchy)
-  * [Upload to hugging-face](#uploading-model-to-hugging-face)
-* [Inference](#inference)
-  * [Download model](#download-model-from-hugging-face)
-  * [Inference with any sentence](#inference-with-custom-text)
+
+- [Installation](#installation)
+  - [OS requirements](#os-requirements)
+  - [Environment](#setting-up-environment)
+- [Creating Dataset](#creating-dataset)
+  - [Transcribing audio](#transcribing-raw-data)
+  - [Slicing dataset](#slicing-the-dataset-and-converting-to-ljspeech)
+- [Preprocessing & Training](#preprocessing-and-training)
+  - [Preprocessing](#preprocessing)
+  - [Download checkpoint](#downloading-pretrained-checkpoint)
+  - [Training](#training)
+  - [Testing](#testing-model)
+- [Upload model](#uploading-model-to-hugging-face)
+  - [Exporting model](#exporting-model)
+  - [Piper-styled repository](#setting-up-piper-styled-hierarchy)
+  - [Upload to hugging-face](#uploading-model-to-hugging-face)
+- [Inference](#inference)
+  - [Download model](#download-model-from-hugging-face)
+  - [Inference with any sentence](#inference-with-custom-text)
 
 # Installation
 
 ### OS requirements
+
 ### Setting up environment
 
 # Creating dataset
@@ -38,8 +40,8 @@ Ideal way to transcribe data is to hire person and mark all text manually. Howev
 we decided to use a bit more automatic approach by using [Whisper-large-v2](https://huggingface.co/openai/whisper-large-v2) model,
 to be more precise [faster-whisper-large-v2](https://huggingface.co/guillaumekln/faster-whisper-large-v2) as it's more optimized.
 
-In order to do this we wrote simple python script `transcribe.py` that requires at pure minimum 
-single input audio file and main language used there. There are also some additional parameters 
+In order to do this we wrote simple python script `transcribe.py` that requires at pure minimum
+single input audio file and main language used there. There are also some additional parameters
 such as `--model`, `--device`, `--output`, `--append` for which you can see usage/documentation
 by writing `python3 transcriber.py -h` in the console.
 
@@ -51,7 +53,6 @@ python3 transcribe.py \
 ```
 
 This command will generate file `transcription.txt` with timestamps and transcriptions in original file.
-
 
 ### Slicing the dataset and converting to ljspeech
 
@@ -72,13 +73,13 @@ cargo run -- voice-samples.mp3 transcription.txt
 
 It should generate the output in the `out/` directory with the cut audio in the `audio/` directory and an `ids.csv` file mapping ids (names) of the audio files to their corresponding transcription.
 
-In order to make dataset fully `ljspeech` format, rename `audio/ -> wav/` and  `ids.csv -> metadata.csv`.
+In order to make dataset fully `ljspeech` format, rename `audio/ -> wav/` and `ids.csv -> metadata.csv`.
 
 # Preprocessing and training
 
 ### Preprocessing
 
-Now when you have raw dataset it's important to preprocess it. In order to do this you should 
+Now when you have raw dataset it's important to preprocess it. In order to do this you should
 run next commands in console:
 
 It's highly recommended to have all datasets in `datasets` folder, and all training in `training`.
@@ -89,13 +90,13 @@ mkdir "datasets"
 mkdir "training"
 ```
 
-Then you need to move your raw dataset into `datasets/` folder. Just to check evething is alright, 
-make sure your file structure is looking the same way:  
+Then you need to move your raw dataset into `datasets/` folder. Just to check evething is alright,
+make sure your file structure is looking the same way:
 
 ```
 piper
 └─── etc
-└─── lib 
+└─── lib
 └─── notebooks
 └─── src
 └─── training
@@ -112,9 +113,10 @@ piper
 If it's true, you are ready to start.
 
 Activate env and download all required libraries
+
 ```shell
 # add environment variable to .bashrc
-echo 'export LD_LIBRARY_PATH=/usr/lib/wsl/lib:$LD_LIBRARY_PATH' >> ~/.bashrc 
+echo 'export LD_LIBRARY_PATH=/usr/lib/wsl/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
 
 python3 -m venv ~/piper/src/python/.venv
 
@@ -126,12 +128,12 @@ python3 -m pip install --upgrade wheel setuptools
 python3 -m pip install -e .
 sudo bash ~/piper/src/python/build_monotonic_align.sh
 
-# downgrade torchmetrics as in newer version there is a bug 
+# downgrade torchmetrics as in newer version there is a bug
 # https://github.com/AUTOMATIC1111/stable-diffusion-webui/issues/11648
 python3 -m pip install torchmetrics==0.11.4
 ```
 
-And when you are done, you can finally run preprocessing script. Replace ``**`` variables with your values.
+And when you are done, you can finally run preprocessing script. Replace `**` variables with your values.
 
 ```shell
 cd ~/piper/src/python/
@@ -149,18 +151,18 @@ python3 -m piper_train.preprocess \
 ### Downloading pretrained checkpoint
 
 It's optional step, you can skip it. However, we strongly suggest to use some pretrained checkpoints
-as it will significantly boost your speed of training. You can download any piper checkpoint 
-(`epoch=XXXX-step=XXXXXXX.ckpt` file) from their official 
+as it will significantly boost your speed of training. You can download any piper checkpoint
+(`epoch=XXXX-step=XXXXXXX.ckpt` file) from their official
 [hugging-face page](https://huggingface.co/datasets/rhasspy/piper-checkpoints/tree/main).
 
 You are not obliged to use the same language, as models use phonemes, not alphabet as base. However,
 it is recommended to use same-family languages as accent may be translated from original checkpoint.
-In our case we used `ru_RU-dmitri-medium` as checkpoint to start from as it provided most similar 
+In our case we used `ru_RU-dmitri-medium` as checkpoint to start from as it provided most similar
 target intonation.
 
 ### Training
 
-We suppose that you already activated environment as described in [preprocessing](#preprocessing) 
+We suppose that you already activated environment as described in [preprocessing](#preprocessing)
 step, so all you need to do is to write next command:
 
 ```shell
@@ -181,7 +183,7 @@ python3 -m piper_train \
 
 If you don't want to start from checkpoint, remove `--resume_from_checkpoint` argument, also make sure
 that `--max_epochs` suits your need. As we used dmitri 6000 was enough for an initial test. You may
-need to change that number according to your need. 
+need to change that number according to your need.
 
 Worth mentioning: on NVIDIA 2080 Super Mobile GPU each epoch takes ~22 seconds. You can use
 this value as starting point to approximate training time.
@@ -213,7 +215,7 @@ mkdir ~/piper/[YOUR_MODEL]
 python3 -m piper_train.export_onnx \
     ~/piper/training/[YOUR_DATASET]/lightning_logs/version_[VERSION_NUMBER]/checkpoints/epoch=5589-step=1382940.ckpt \
     ~/piper/[YOUR_MODEL]/[LANGUAGE]-[MODEL_NAME]-medium.onnx
-    
+
 cp ~/piper/training/[YOUR_DATASET]/config.json \
    ~/piper/[YOUR_MODEL]/[LANGUAGE]-[MODEL_NAME]-medium.onnx.json
 ```
@@ -225,6 +227,7 @@ as other piper-based projects. It includes having `.onnx` and `.onnx.json` files
 `MODEL_CARD` file with model description and `voices.json` file with all your models. So let's start from `MODEL_CARD`.
 
 Create `MODEL_CARD` file in `~/piper/[YOUR_MODEL]` directory with next content
+
 ```text
 # Model card for [MODEL_NAME] (medium)
 
@@ -247,7 +250,7 @@ And final part is to make `voices.json` file that will describe all your trained
 important to have such file even if you trained one model as it will be parsed when someone will
 download your model.
 
-File containing inside just path's to each file, so you can define them yourself. We will just show you 
+File containing inside just path's to each file, so you can define them yourself. We will just show you
 an example how our Pushnoy model look like in it.
 
 P.S. You can get `md5 hash` by running `sudo md5sum filename`. \
@@ -256,32 +259,33 @@ P.P.S. You can get `size_bytes` by running `wc -c < filename`.
 ```json
 // voices.json file
 {
-    "ru_RU-pushnoy-medium": {
-        "name": "pushnoy",
-        "language": "ru_RU",
-        "quality": "medium",
-        "num_speakers": 1,
-        "speaker_id_map": {},
-        "files": {
-            "ru_RU-pushnoy-medium.onnx": {
-                "size_bytes": 63511038,
-                "md5_digest": "ac01e25a9c6da1fe8af8f921cb7a833b"
-            },
-            "ru_RU-pushnoy-medium.onnx.json": {
-                "size_bytes": 7094,
-                "md5_digest": "2e679f7839293f9412bf1e2973fe1138"
-            },
-            "MODEL_CARD": {
-                "size_bytes": 309,
-                "md5_digest": "d6b3806b0f121ad01360d6fe81952064"
-            }
-        }
+  "ru_RU-pushnoy-medium": {
+    "name": "pushnoy",
+    "language": "ru_RU",
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "ru_RU-pushnoy-medium.onnx": {
+        "size_bytes": 63511038,
+        "md5_digest": "ac01e25a9c6da1fe8af8f921cb7a833b"
+      },
+      "ru_RU-pushnoy-medium.onnx.json": {
+        "size_bytes": 7094,
+        "md5_digest": "2e679f7839293f9412bf1e2973fe1138"
+      },
+      "MODEL_CARD": {
+        "size_bytes": 309,
+        "md5_digest": "d6b3806b0f121ad01360d6fe81952064"
+      }
     }
+  }
 }
 ```
 
 ### Upload model to hugging-face
-Upload all your files to [hugging face](https://huggingface.co/). Make sure to make your 
+
+Upload all your files to [hugging face](https://huggingface.co/). Make sure to make your
 model and files public and add description!
 
 Our [Pushnoy model](https://huggingface.co/cutefluffyfox/pushnoy-piper-tts/tree/main) as an example.
@@ -307,4 +311,3 @@ PiperDownloader(model_name, repo_id=huggingface_repo).download()
 Inference is also pretty simple as we already wrote script for it. You can modify `pushnoy-tts/inference.py`
 file with your `model_name`, `repo_id`, `language` and `text`. That's enough to generate any audio with your
 custom TTS model!
-
