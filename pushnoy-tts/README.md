@@ -28,9 +28,55 @@ most importantly high-quality text-to-speech (not monotonic / too synthetic).
 
 # Installation
 
-### OS requirements
+### OS and Hardware requirements
+
+- Linux or [WSL](https://learn.microsoft.com/en-us/windows/wsl/install)
+- NVIDIA GPU with CUDA support (preferably, but not required)
 
 ### Setting up environment
+
+#### WSL Installation
+
+If you are using Windows, you can install WSL by following [this guide](https://learn.microsoft.com/en-us/windows/wsl/install), which will be briefly summarized here.
+
+1. Open PowerShell as Administrator and run the following command:
+
+```powershell
+wsl --update
+wsl --set-default-version 2
+
+wsl --install
+```
+
+In case you get any errors, please, refer to [this guide](https://learn.microsoft.com/en-us/windows/wsl/install-manual).
+
+2. After the installation is complete, you can open the Ubuntu terminal and proceed with the next step -- installing required packages.
+
+```shell
+sudo apt update
+sudo apt dist-upgrade -y
+sudo apt install python3-dev python3.10-venv espeak-ng ffmpeg build-essential -y
+```
+
+#### Python environment
+
+We will create a virtual environment for Python packages, so that they don't interfere with the system packages.
+
+```shell
+cd ~/
+
+git clone https://github.com/rhasspy/piper.git
+
+python3 -m venv ~/piper/src/python/.venv
+
+cd ~/piper/src/python/
+source ~/piper/src/python/.venv/bin/activate
+
+python3 -m pip install --upgrade pip
+python3 -m pip install --upgrade wheel setuptools
+python3 -m pip install -e .
+sudo bash ~/piper/src/python/build_monotonic_align.sh
+```
 
 # Creating dataset
 
