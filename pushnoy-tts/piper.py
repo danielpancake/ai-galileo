@@ -38,16 +38,20 @@ class PiperConfig:
 
 
 class Piper:
-    def __init__(self, model: str, use_cuda: Union[bool, str] = 'auto'):
-        model_path = os.path.join(Downloader.models_path, 'Piper', model, model + '.onnx')
+    def __init__(self, model: str, use_cuda: Union[bool, str] = "auto"):
+        model_path = os.path.join(
+            Downloader.models_path, "Piper", model, model + ".onnx"
+        )
         config_path = f"{model_path}.json"
 
-        if use_cuda == 'auto':
+        if use_cuda == "auto":
             use_cuda = torch.cuda.is_available()
 
         if not os.path.exists(config_path):
-            raise FileNotFoundError(f'Model {model} is not downloaded yet, please download it '
-                                    f'first by PiperDownloader class')
+            raise FileNotFoundError(
+                f"Model {model} is not downloaded yet, please download it "
+                f"first by PiperDownloader class"
+            )
 
         self.config = load_config(config_path)
         self.phonemizer = Phonemizer(self.config.espeak_voice)
@@ -101,7 +105,11 @@ class Piper:
                 "input": phoneme_ids_array,
                 "input_lengths": phoneme_ids_lengths,
                 "scales": scales,
-                "sid": None if self.config.num_speakers == 1 else np.array([0 if speaker_id is None else speaker_id], dtype=np.int64),
+                "sid": None
+                if self.config.num_speakers == 1
+                else np.array(
+                    [0 if speaker_id is None else speaker_id], dtype=np.int64
+                ),
             },
         )[0].squeeze((0, 1))
         audio = audio_float_to_int16(audio.squeeze())
@@ -142,7 +150,9 @@ def load_config(config_path: Union[str, Path]) -> PiperConfig:
         )
 
 
-def audio_float_to_int16(audio: np.ndarray, max_wav_value: float = 32767.0) -> np.ndarray:
+def audio_float_to_int16(
+    audio: np.ndarray, max_wav_value: float = 32767.0
+) -> np.ndarray:
     """Normalize audio and convert to int16 range"""
     audio_norm = audio * (max_wav_value / max(0.01, np.max(np.abs(audio))))
     audio_norm = np.clip(audio_norm, -max_wav_value, max_wav_value)

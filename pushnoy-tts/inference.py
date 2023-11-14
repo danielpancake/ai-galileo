@@ -7,23 +7,23 @@ from piper import Piper
 
 
 # Configure logging
-FORMAT = '%(asctime)s : %(message)s'
+FORMAT = "%(asctime)s : %(message)s"
 logging.basicConfig(format=FORMAT, level=logging.INFO)
 
 
 # Define all required key variables
 speech_speed = 1.6
-output_file = 'tts-sts.wav'
-model = 'ru_RU-pushnoy-medium'
+output_file = "tts-sts.wav"
+model = "ru_RU-pushnoy-medium"
 text = "Привет дорогие друзья!"
 
 
 # Download models
-PiperDownloader(model, repo_id='cutefluffyfox/pushnoy-piper-tts').download()
+PiperDownloader(model, repo_id="cutefluffyfox/pushnoy-piper-tts").download()
 
 
 # Define all models (after downloading)
-piper = Piper(model, use_cuda='auto')
+piper = Piper(model, use_cuda="auto")
 
 # Full pipeline
 piper.synthesize_and_save(text, output_file=output_file, length_scale=speech_speed)
