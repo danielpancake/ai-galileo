@@ -14,9 +14,23 @@ else:
     import termios
 
 
+class ConsolePanel:
+    def __init__(self):
+        self.requires_redraw = False
+
+    def update(self):
+        pass
+
+    def redraw(self):
+        pass
+
+
 class ConsoleUI:
     def __init__(self, panels: list):
         self.panels = panels
+
+    def add_panel(self, panel: ConsolePanel):
+        self.panels.append(panel)
 
     def update(self):
         for panel in self.panels:
@@ -35,17 +49,6 @@ class ConsoleUI:
         print("\033[H\033[J", end="")
 
 
-class ConsolePanel:
-    def __init__(self):
-        self.requires_redraw = False
-
-    def update(self):
-        pass
-
-    def redraw(self):
-        pass
-
-
 class ScheduleTable(ConsolePanel):
     def __init__(self):
         super().__init__()
@@ -53,6 +56,8 @@ class ScheduleTable(ConsolePanel):
         self.schedule = PrettyTable()
         self.schedule.padding_width = 0
         self.schedule.field_names = ["ID", "Theme", "Status", "Author", "Request time"]
+        self.schedule.align["Theme"] = "l"
+
         self.columns_percent = {
             "ID": 0.1,
             "Theme": 0.6,
