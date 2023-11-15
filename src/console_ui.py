@@ -1,8 +1,8 @@
 from prettytable import PrettyTable
+from utils import table_resize, terminal_get_size
 
 import os
 import sys
-import time
 
 if os.name == "nt":
     import msvcrt
@@ -14,56 +14,93 @@ else:
     import termios
 
 
-def resize_table(
-    table: PrettyTable, terminal_columns: int, columns_percent: dict
-) -> None:
-    # Account for borders and padding
-    columns = terminal_columns
-    columns -= len(table._field_names) + 1
-    columns -= 2 * len(table._field_names) * table._padding_width
+class ConsoleUI:
+    def __init__(self, panels: list):
+        self.panels = panels
 
-    # Set new min width
-    table._min_width = dict(
-        (name, int(columns * percent)) for name, percent in columns_percent.items()
-    )
+    def update(self):
+        for panel in self.panels:
+            panel.update()
+
+        # If any panel requires a redraw, redraw all panels
+        if any([panel.requires_redraw for panel in self.panels]):
+            self.clear()
+
+            for panel in self.panels:
+                panel.redraw()
+                panel.requires_redraw = False
+
+    @staticmethod
+    def clear():
+        print("\033[H\033[J", end="")
 
 
-class GalileoConsole:
-    def __init__(self) -> None:
-        self.__prev_terminal_size = None
-        self.__prev_user_input = ""
-        self.__user_input = ""
+class ConsolePanel:
+    def __init__(self):
+        self.requires_redraw = False
+
+    def update(self):
+        pass
+
+    def redraw(self):
+        pass
+
+
+class ScheduleTable(ConsolePanel):
+    def __init__(self):
+        super().__init__()
 
         self.schedule = PrettyTable()
         self.schedule.padding_width = 0
-        self.schedule.field_names = ["#", "Theme", "Status", "Request time"]
+        self.schedule.field_names = ["ID", "Theme", "Status", "Request time"]
         self.columns_percent = {
-            "#": 0.05,
+            "ID": 0.05,
             "Theme": 0.5,
             "Status": 0.2,
             "Request time": 0.25,
         }
 
-        self.schedule.add_row(["-1", "Nothing to show", "", ""])
-        self.__has_entries = False
+        self.schedule.add_row(["", "Nothing to show", "", ""])
 
-    def __update_table(self) -> None:
-        curr_terminal_size = self.get_terminal_size()
+        self.__prev_terminal_size = None
 
-        # Resize table, clear and reprint
-        resize_table(self.schedule, curr_terminal_size[0], self.columns_percent)
-        self.clear()
+    def pull_data(self, data: list) -> None:
+        self.schedule.clear_rows()
+        self.schedule.add_rows(data)
 
+        if len(data) == 0:
+            self.schedule.add_row(["", "Nothing to show", "", ""])
+
+        self.requires_redraw = True
+
+    def update(self) -> None:
+        if self.__prev_terminal_size != terminal_get_size():
+            self.requires_redraw = True
+
+    def redraw(self):
+        terminal_size = terminal_get_size()
+
+        table_resize(self.schedule, terminal_size[0], self.columns_percent)
         print(self.schedule)
-        print(f"Add new theme: {self.__user_input}", end="")
 
-        # Flush stdout
-        sys.stdout.flush()
+        self.__prev_terminal_size = terminal_size
 
-        self.__prev_terminal_size = curr_terminal_size
-        self.__prev_user_input = self.__user_input
 
-    def __update_user_input(self) -> None:
+class InputLine(ConsolePanel):
+    def __init__(
+        self,
+        prompt: str,
+        enter_callback: callable = None,
+        escape_callback: callable = None,
+    ):
+        super().__init__()
+        self.prompt = prompt
+        self.enter_callback = enter_callback
+        self.escape_callback = escape_callback
+
+        self.user_input = ""
+
+    def update(self) -> None:
         char = None
 
         if os.name == "nt":
@@ -75,57 +112,30 @@ class GalileoConsole:
                 char = sys.stdin.read(1)
 
         if char is None:
-            return "continue"
+            return
 
         match char:
             # ESC
             case "\x1b":
-                return "exit"
+                if self.escape_callback is not None:
+                    self.escape_callback()
             # Backspace
             case "\x08":
-                self.__user_input = self.__user_input[:-1]
+                self.user_input = self.user_input[:-1]
+                self.requires_redraw = True
             # Paste from clipboard
             case "\x16":
                 pass
             # Enter
             case "\r":
-                if self.__user_input != "":
-                    self.add_to_schedule(self.__user_input)
-                self.__user_input = ""
+                if self.enter_callback is not None:
+                    self.enter_callback(self.user_input)
+                self.user_input = ""
+                self.requires_redraw = True
             case k:
-                self.__user_input += k
+                self.user_input += k
+                self.requires_redraw = True
 
-        return "continue"
-
-    def update(self) -> str:
-        terminal_size_changed = self.get_terminal_size() != self.__prev_terminal_size
-        user_input_changed = self.__user_input != self.__prev_user_input
-
-        if terminal_size_changed or user_input_changed:
-            self.__update_table()
-
-        return self.__update_user_input()
-
-    def add_to_schedule(self, theme: str) -> None:
-        # Remove "Nothing to show" placeholder
-        if not self.__has_entries:
-            self.schedule.del_row(-1)
-            self.__has_entries = True
-
-        # Add new row
-        n = len(self.schedule._rows) + 1
-        t = time.strftime("%H:%M:%S", time.localtime())
-
-        self.schedule.add_row([n, theme, "Scheduled", t])
-
-    @staticmethod
-    def clear() -> None:
-        if os.name == "nt":
-            os.system("cls")
-        else:
-            os.system("clear")
-
-    @staticmethod
-    def get_terminal_size() -> tuple:
-        size = os.get_terminal_size()
-        return (size.columns, size.lines)
+    def redraw(self):
+        print(f"{self.prompt}{self.user_input}", end="")
+        sys.stdout.flush()
