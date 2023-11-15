@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from rq import Connection, SimpleWorker
 from rq_win import WindowsWorker
 
-import platform
+import os
 import sys
 
 with Connection():
@@ -12,5 +12,5 @@ with Connection():
     load_dotenv()
 
     # Use WindowsWorker if on Windows, otherwise use SimpleWorker
-    w = WindowsWorker(qs) if platform.system() == "Windows" else SimpleWorker(qs)
+    w = WindowsWorker(qs) if os.name == "nt" else SimpleWorker(qs)
     w.work()
