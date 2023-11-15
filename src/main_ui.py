@@ -1,17 +1,25 @@
 from alarm_clock import Alarm
 from console_ui import ConsoleUI, ScheduleTable, InputLine
 from datetime import datetime
-
+from loguru import logger
 from pymongo.collection import Collection
-
 from statuses import StatusCodes
+
+import pytchat
+import re
 
 
 class AppUI:
     """The main UI for the app. This is a table that shows the topics that have been submitted."""
 
-    def __init__(self, submission_topics: Collection, with_manual_input: bool = True):
+    def __init__(
+        self,
+        submission_topics: Collection,
+        with_manual_input: bool = True,
+        yt_stream_id: str = None,
+    ):
         self.submission_topics = submission_topics
+        self.yt_chat = None
 
         # Setup the console UI
         self.submission_table = ScheduleTable()
@@ -23,8 +31,8 @@ class AppUI:
         # Setup the console UI
         self.console_ui = ConsoleUI([self.submission_table])
 
-        # This is only used for manual theme submission
-        if with_manual_input:
+        if with_manual_input or yt_stream_id is None:
+            # This is only used for manual theme submission
             self.theme_prompter = InputLine(
                 "* Theme: ",
                 escape_callback=lambda: exit(0),
@@ -33,8 +41,12 @@ class AppUI:
                 ),
             )
             self.console_ui.add_panel(self.theme_prompter)
+        else:
+            self.yt_chat = pytchat.create(yt_stream_id)
 
     def add_topic_submission(self, theme: str, requested_by: str):
+        logger.info(f"New topic submission: {theme}")
+
         self.submission_topics.insert_one(
             {
                 "theme": theme,
@@ -44,8 +56,23 @@ class AppUI:
             }
         )
 
+    def poll_youtube(self):
+        """Poll YouTube Stream chat for new topic submissions."""
+        if self.yt_chat.is_alive():
+            for c in self.yt_chat.get().sync_items():
+                if not re.search(r"!topic", c.message):
+                    continue
+
+                theme = re.sub(r"!topic", "", c.message).strip()
+
+                # Add to submission topics
+                self.add_topic_submission(theme, c.author.name)
+
     def update(self):
         self.console_ui.update()
+
+        if self.yt_chat is not None:
+            self.poll_youtube()
 
         # Update the submission table from the database
         if self.update_alarm.check_alarm():

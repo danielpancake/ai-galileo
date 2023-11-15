@@ -40,13 +40,15 @@ class RQConductor:
         for job in self.jobs:
             match job.get_status():
                 case JobStatus.FINISHED:
-                    finished_jobs.append(job)
-
                     if finish_callback:
-                        finish_callback(job)
+                        finish_callback(job.id, job.result)
+
+                    # Mark job as finished
+                    finished_jobs.append(job)
 
                 case _:
                     pass
 
+        # Remove finished jobs
         for job in finished_jobs:
             self.jobs.remove(job)
