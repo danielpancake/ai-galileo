@@ -52,38 +52,39 @@ class ScheduleTable(ConsolePanel):
 
         self.schedule = PrettyTable()
         self.schedule.padding_width = 0
-        self.schedule.field_names = ["ID", "Theme", "Status", "Request time"]
+        self.schedule.field_names = ["ID", "Theme", "Status", "Author", "Request time"]
         self.columns_percent = {
-            "ID": 0.05,
-            "Theme": 0.5,
-            "Status": 0.2,
-            "Request time": 0.25,
+            "ID": 0.1,
+            "Theme": 0.6,
+            "Status": 0.1,
+            "Author": 0.1,
+            "Request time": 0.1,
         }
 
-        self.schedule.add_row(["", "Nothing to show", "", ""])
+        self.schedule.add_row(["", "Nothing to show", "", "", ""])
 
-        self.__prev_terminal_size = None
+        self.__prev_terminal_cols = None
 
     def pull_data(self, data: list) -> None:
         self.schedule.clear_rows()
         self.schedule.add_rows(data)
 
         if len(data) == 0:
-            self.schedule.add_row(["", "Nothing to show", "", ""])
+            self.schedule.add_row(["", "Nothing to show", "", "", ""])
 
         self.requires_redraw = True
 
     def update(self) -> None:
-        if self.__prev_terminal_size != terminal_get_size():
+        if self.__prev_terminal_cols != terminal_get_size()[0]:
             self.requires_redraw = True
 
     def redraw(self):
-        terminal_size = terminal_get_size()
+        terminal_cols = terminal_get_size()[0]
 
-        table_resize(self.schedule, terminal_size[0], self.columns_percent)
+        table_resize(self.schedule, terminal_cols, self.columns_percent)
         print(self.schedule)
 
-        self.__prev_terminal_size = terminal_size
+        self.__prev_terminal_cols = terminal_cols
 
 
 class InputLine(ConsolePanel):
