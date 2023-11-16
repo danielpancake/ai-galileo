@@ -1,9 +1,10 @@
-from alarm_clock import Alarm
-from console_ui import ConsoleUI, ScheduleTable, InputLine
 from datetime import datetime
 from loguru import logger
 from pymongo.collection import Collection
-from statuses import StatusCodes
+
+from ui.console_ui import ConsoleUI, ScheduleTable, InputLine
+from system.alarm_clock import Alarm
+from system.status import StatusCode
 
 import pytchat
 import re
@@ -50,7 +51,7 @@ class AppUI:
         self.submission_topics.insert_one(
             {
                 "theme": theme,
-                "status": StatusCodes.ADDED,
+                "status": StatusCode.ADDED,
                 "requested_by": requested_by,
                 "requested_at": datetime.now().strftime("%H:%M:%S.%f")[0:-3],
             }

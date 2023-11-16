@@ -1,21 +1,19 @@
-from director import generate_full_story
 from dotenv import load_dotenv
 from loguru import logger
 from pymongo import MongoClient, errors
-from utils import StatusCodes, run_in_terminal
 
-from redis import Redis
-from rq import Queue
-from rq.job import JobStatus
+from system.rq_conductor import RQConductor
+from system.status import StatusCode
+from ui.main_ui import AppUI
 
 import argparse
 import os
-import pytchat
-import re
 import toml
 
-
 QUEUE_STORIES_BASENAME = "stories"
+
+load_dotenv()
+logger.add("logs/main.log")
 
 
 def setup_args():
@@ -24,159 +22,112 @@ def setup_args():
         prog="ai-galileo",
         description="AI Galileo is a chatbot that generates stories based on user-submitted topics.",
     )
-    parser.add_argument("--clean", help="Clean the database", action="store_true")
-    parser.add_argument("--verbose", help="Verbose logging", action="store_true")
+    parser.add_argument("--clear", help="Clear the database", action="store_true")
     parser.add_argument("--rq-start", help="Run RQ workers", action="store_true")
-    parser.add_argument("--rq-count", help="Number of RQ workers", type=int, default=3)
     parser.add_argument(
-        "--local-theme",
-        help="Generate a story locally. Disables YouTube chat listener",
-        type=str,
-        default=None,
+        "--rq-count", help="Number of RQ workers for stories queue", type=int, default=3
+    )
+    parser.add_argument(
+        "--rq-piper-count", help="Number of RQ workers piper tts", type=int, default=3
+    )
+    parser.add_argument(
+        "--yt", help="Start the YouTube chat listener. Requires stream ID", type=str
     )
 
     return parser.parse_args()
 
 
 if __name__ == "__main__":
-    load_dotenv()
     args = setup_args()
 
-    # Start RQ workers
-    if args.rq_start:
-        for i in range(args.rq_count):
-            run_in_terminal(f"python worker.py {QUEUE_STORIES_BASENAME}{i}")
-
-            if args.verbose:
-                logger.info(f"Started worker for {QUEUE_STORIES_BASENAME}{i}")
-
-    # Setup Redis queues
-    q_stories_list = [
-        Queue(f"{QUEUE_STORIES_BASENAME}{i}", connection=Redis())
-        for i in range(args.rq_count)
-    ]
-    q_stories_current = 0
-
-    topics_jobs = []
-
+    # Setup MongoDB
     try:
-        # Setup MongoDB
-        mongo_client = MongoClient(os.environ.get("MONGO_URI"))
+        mongo_client = MongoClient(os.getenv("MONGO_URI"))
         mongo_client.server_info()
     except errors.ServerSelectionTimeoutError as err:
         logger.error(err)
         exit(1)
-
-    if args.verbose:
-        logger.info("Connected to MongoDB")
-
-    db = mongo_client["ai-galileo"]
-
-    # Clear submission topics and stories from previous runs
-    if args.clean:
-        db["submission_topics"].delete_many({})
-        db["stories"].delete_many({})
+    logger.info("Connected to MongoDB")
 
     # Load director config
-    director_config = toml.load("prompts.toml")
+    director_config = toml.load("./text_gen/prompts.toml")
 
-    # Setup YouTube chat listener
-    if args.local_theme:
-        db["submission_topics"].insert_one(
-            {
-                "theme": args.local_theme,
-                "requested_by": "admin",
-                "status": StatusCodes.ADDED,
-            }
+    # The main mongo database has two collections:
+    # - `submission_topics`: stores the topics that have been submitted
+    # - `stories`: stores the stories that have been processed
+    db = mongo_client["ai_galileo"]
+
+    # The schema for `submission_topics` is:
+    # {
+    #     "_id": ObjectId,
+    #     "theme": str,
+    #     "status": int,
+    #     "requested_by": str,
+    #     "requested_at": datetime,
+    # }
+    submission_topics = db["submission_topics"]
+
+    # The schema for `stories` is:
+    # {
+    #     "_id": ObjectId,
+    #     "theme": str,
+    #     "story_intro": list[dict],
+    #     "story_main": list[dict],
+    #     "story_outro": list[dict],
+    #     "requested_by": str,
+    #     "requested_at": datetime,
+    # }
+    stories = db["stories"]
+    stories_rq_conductor = RQConductor(
+        QUEUE_STORIES_BASENAME,
+        "env_worker.py",
+        auto_start=args.rq_start,
+        count=args.rq_count,
+    )
+
+    # Clear the database if requested
+    if args.clear:
+        delete_all = input(
+            "Are you sure you want to clear the database? This action cannot be undone. [y/N] "
         )
+
+        if delete_all.lower() == "y":
+            submission_topics.delete_many({})
+            stories.delete_many({})
+            logger.info("Cleared the database")
+
+    # Setup the app UI
+    if args.yt:
+        UI = AppUI(submission_topics, yt_stream_id=args.yt)
     else:
-        chat = pytchat.create(os.environ.get("STREAM_ID"))
+        UI = AppUI(submission_topics)
 
     while True:
-        # Poll chat for new topic submissions
-        if not args.local_theme and chat.is_alive():
-            for c in chat.get().sync_items():
-                if not re.search(r"!topic", c.message):
-                    continue
-
-                theme = re.sub(r"!topic", "", c.message).strip()
-
-                if args.verbose:
-                    logger.info(f"New topic submission: {theme}")
-
-                # Add to submission topics
-                db["submission_topics"].insert_one(
-                    {
-                        "theme": theme,
-                        "requested_by": c.author.name,
-                        "status": StatusCodes.ADDED,
-                    }
-                )
-
-        # Process new topics
-        for topic in db["submission_topics"].find({"status": StatusCodes.ADDED}):
-            q_stories = q_stories_list[q_stories_current]
-            q_stories_current = (q_stories_current + 1) % args.rq_count
-
-            job = q_stories.enqueue(
-                generate_full_story,
-                args=(director_config, topic["theme"]),
+        # Process newly added topics
+        for topic in submission_topics.find({"status": StatusCode.ADDED}):
+            stories_rq_conductor.enqueue_job(
+                "text_gen.story_gen.generate_episode",
+                args=[director_config, topic["theme"]],
+                job_id=str(topic["_id"]),
                 job_timeout=3600,
             )
 
             # Update status
-            db["submission_topics"].update_one(
-                {"_id": topic["_id"]}, {"$set": {"status": StatusCodes.QUEUED}}
+            submission_topics.update_one(
+                {"_id": topic["_id"]}, {"$set": {"status": StatusCode.QUEUED}}
             )
 
-            topics_jobs.append(
-                {
-                    "_id": topic["_id"],
-                    "job_id": job,
-                }
+        for _id, result in stories_rq_conductor.update():
+            # Update status
+            submission_topics.update_one(
+                {"_id": _id}, {"$set": {"status": StatusCode.FINISHED}}
             )
 
-        # Check status of jobs
-        finished_jobs = []
+            # Retrieve who asked
+            author = submission_topics.find_one({"_id": _id})["requested_by"]
+            result["requested_by"] = author
 
-        for topic_job in topics_jobs:
-            job = topic_job["job_id"]
+            # Add to the stories collection
+            stories.insert_one(result)
 
-            match job.get_status():
-                case JobStatus.FINISHED:
-                    job_result = job.result
-
-                    # Update status
-                    db["submission_topics"].update_one(
-                        {"_id": topic_job["_id"]},
-                        {"$set": {"status": StatusCodes.COMPLETED}},
-                    )
-
-                    # Retrieve who asked
-                    requested_by = db["submission_topics"].find_one(
-                        {"_id": topic_job["_id"]}
-                    )["requested_by"]
-
-                    # Add to stories
-                    db["stories"].insert_one(
-                        {
-                            "theme": job_result["theme"],
-                            "story": job_result["story"],
-                            "pre_story": job_result["pre_story"],
-                            "post_story": job_result["post_story"],
-                            "requested_by": requested_by,
-                        }
-                    )
-
-                    # Mark job for removal
-                    finished_jobs.append(topic_job)
-
-                case _:
-                    pass
-
-        # Remove finished jobs
-        for job in finished_jobs:
-            topics_jobs.remove(job)
-
-            # Remove from submission topics
-            db["submission_topics"].delete_one({"_id": job["_id"]})
+        UI.update()

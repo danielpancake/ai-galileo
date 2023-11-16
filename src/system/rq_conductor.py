@@ -1,3 +1,4 @@
+from bson import ObjectId
 from redis import Redis
 from rq import Queue
 from rq.job import JobStatus
@@ -9,9 +10,9 @@ class RQConductor:
     def __init__(
         self,
         basename: str,
-        count: int = 3,
+        worker: str,
         auto_start: bool = True,
-        worker: str = "worker.py",
+        count: int = 3,
     ):
         # Start RQ workers
         if auto_start:
@@ -34,16 +35,14 @@ class RQConductor:
 
         self.current_queue = (self.current_queue + 1) % self.max_queue
 
-    def update(self, finish_callback: callable = None):
+    def update(self) -> list:
+        result = []
         finished_jobs = []
 
         for job in self.jobs:
             match job.get_status():
                 case JobStatus.FINISHED:
-                    if finish_callback:
-                        finish_callback(job.id, job.result)
-
-                    # Mark job as finished
+                    result.append((ObjectId(job.id), job.result))
                     finished_jobs.append(job)
 
                 case _:
@@ -52,3 +51,5 @@ class RQConductor:
         # Remove finished jobs
         for job in finished_jobs:
             self.jobs.remove(job)
+
+        return result

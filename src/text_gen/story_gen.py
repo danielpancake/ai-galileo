@@ -1,12 +1,15 @@
 from claude_api import Client
 from loguru import logger
+
 from utils import toml_interpolate
 
 import os
 import re
 
 
-class StoryContext:
+class ChatContext:
+    """Context manager for Claude API. Creates a new chat and deletes it when the context exits."""
+
     def __init__(self):
         cookie = os.environ.get("COOKIE")
 
@@ -14,16 +17,52 @@ class StoryContext:
             raise Exception("No COOKIE env variable provided.")
 
         self.claude_client = Client(cookie)
-        self.story_id = None
+        self.chat_id = None
 
     def __enter__(self):
-        story_generator = self.claude_client.create_new_chat()
-        self.story_id = story_generator["uuid"]
+        self.chat_id = self.claude_client.create_new_chat()["uuid"]
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.claude_client.delete_conversation(self.story_id)
-        self.story_id = None
+        # self.claude_client.delete_conversation(self.chat_id)
+        self.chat_id = None
+
+
+def generate_episode(config: dict, theme: str) -> dict:
+    """Generate an episode from a theme, which includes a story, intro, and outro."""
+
+    response = {"theme": theme}
+
+    # Form prompts by interpolating TOML strings
+    prompts_items = ["story", "story_intro", "story_outro"]
+    prompts = {}
+    for item in prompts_items:
+        prompts[item] = toml_interpolate(
+            config["prompts"][item],
+            [response, config],
+        )
+
+    with ChatContext() as ctx:
+        for item in prompts_items:
+            response[item] = parse_story(
+                ctx.claude_client.send_message(
+                    prompts[item],
+                    ctx.chat_id,
+                    timeout=600,
+                )
+            )
+
+            logger.info(f"Succesfully generated {item} for theme {theme}.")
+
+    return response
+
+
+def generate_episode_testonly(config: dict, theme: str) -> dict:
+    import time
+
+    time.sleep(5)
+
+    return {"theme": theme}
 
 
 def parse_story(story_text: str) -> list:
@@ -35,7 +74,6 @@ def parse_story(story_text: str) -> list:
     phrases = [p for p in phrases if p]
 
     script = []
-
     for phrase in phrases:
         # Extract actions from phrase
         actions = re.findall(r"\((.*?)\)", phrase)
@@ -61,32 +99,3 @@ def parse_story(story_text: str) -> list:
             )
 
     return script
-
-
-def generate_full_story(config: dict, theme: str) -> dict:
-    """Generate a full story from a theme, which includes an intro, story, and outro."""
-
-    prompts_items = ["story", "pre_story", "post_story"]
-
-    response = {
-        "theme": theme,
-    }
-
-    # Form prompts by interpolating TOML strings
-    prompts = {}
-    for item in prompts_items:
-        prompts[item] = toml_interpolate(config["prompts"][item], [response, config])
-
-    with StoryContext() as ctx:
-        logger.info(f"Story ID: {ctx.story_id}")
-
-        for item in prompts_items:
-            response[item] = ctx.claude_client.send_message(
-                prompts[item], ctx.story_id, timeout=600
-            )
-
-            response[item] = parse_story(response[item])
-
-            logger.info(f"Generated {item}")
-
-    return response
