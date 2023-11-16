@@ -104,7 +104,7 @@ if __name__ == "__main__":
 
     while True:
         # Process newly added topics
-        for topic in submission_topics.find({"status": StatusCode.ADDED}):
+        for topic in submission_topics.find({"status": StatusCode.SCHEDULED}):
             stories_rq_conductor.enqueue_job(
                 "text_gen.story_gen.generate_episode",
                 args=[director_config, topic["theme"]],
@@ -114,13 +114,14 @@ if __name__ == "__main__":
 
             # Update status
             submission_topics.update_one(
-                {"_id": topic["_id"]}, {"$set": {"status": StatusCode.QUEUED}}
+                {"_id": topic["_id"]},
+                {"$set": {"status": StatusCode.IN_PROGRESS_TEXT_GEN}},
             )
 
         for _id, result in stories_rq_conductor.update():
             # Update status
             submission_topics.update_one(
-                {"_id": _id}, {"$set": {"status": StatusCode.FINISHED}}
+                {"_id": _id}, {"$set": {"status": StatusCode.FINISHED_TEXT_GEN}}
             )
 
             # Retrieve who asked

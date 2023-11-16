@@ -51,7 +51,7 @@ class AppUI:
         self.submission_topics.insert_one(
             {
                 "theme": theme,
-                "status": StatusCode.ADDED,
+                "status": StatusCode.SCHEDULED,
                 "requested_by": requested_by,
                 "requested_at": datetime.now().strftime("%H:%M:%S.%f")[0:-3],
             }
