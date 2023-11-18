@@ -1,10 +1,10 @@
+from huggingface_hub import hf_hub_download
+
 import os
 import json
 import shutil
 import logging
 import hashlib
-
-from huggingface_hub import hf_hub_download
 
 
 def calculate_md5(file_name) -> str:

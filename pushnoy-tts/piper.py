@@ -1,22 +1,23 @@
 # This code is taken and partially modified from Piper official repository under MIT Licence
 # https://github.com/rhasspy/piper/blob/master/src/python_run/piper/__init__.py
 
+from dataclasses import dataclass
+from pathlib import Path
+from typing import List, Mapping, Optional, Sequence, Union
+
+from downloader import Downloader
+from espeak_phonemizer import Phonemizer
+
+import numpy as np
+import onnxruntime
+import torch.cuda
+
 import io
 import os
 import json
 import logging
 import wave
-from dataclasses import dataclass
-from pathlib import Path
-from typing import List, Mapping, Optional, Sequence, Union
 
-import torch.cuda
-
-from downloader import Downloader
-
-import numpy as np
-import onnxruntime
-from espeak_phonemizer import Phonemizer
 
 _LOGGER = logging.getLogger(__name__)
 

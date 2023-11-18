@@ -12,10 +12,10 @@ logging.basicConfig(format=FORMAT, level=logging.INFO)
 
 
 # Define all required key variables
-speech_speed = 1.6
+speech_speed = 1
 output_file = "tts-sts.wav"
 model = "ru_RU-pushnoy-medium"
-text = "Привет дорогие друзья!"
+text = "Я ничего не боюсь, Марго, - вдруг ответил ей мастер и поднял голову и показался ей таким, каким был, когда сочинял то, чего никогда не видал, но о чём наверно знал, что оно было, - и не боюсь, потому что я всё уже испытал."
 
 
 # Download models
@@ -26,4 +26,4 @@ PiperDownloader(model, repo_id="cutefluffyfox/pushnoy-piper-tts").download()
 piper = Piper(model, use_cuda="auto")
 
 # Full pipeline
-piper.synthesize_and_save(text, output_file=output_file, length_scale=speech_speed)
+piper.synthesize_and_save(text, output_file=output_file, length_scale=1 / speech_speed)

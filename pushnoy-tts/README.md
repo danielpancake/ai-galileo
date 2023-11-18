@@ -1,7 +1,6 @@
 # Training custom tts with Piper
 
-This tutorial is made by our team in order to help
-reproduce our results of Pushnoy-model. We will use
+This tutorial is made by our team in order to help reproduce our results of Pushnoy-model. We will use
 [piper-tts](https://github.com/rhasspy/piper/tree/master) model's architecture as it's new, stable, light and
 most importantly high-quality text-to-speech (not monotonic / too synthetic).
 

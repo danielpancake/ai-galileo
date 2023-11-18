@@ -1,7 +1,8 @@
+from faster_whisper import WhisperModel
+
 import torch
 import logging
 import argparse
-from faster_whisper import WhisperModel
 
 
 logger = logging.getLogger("whisper")
