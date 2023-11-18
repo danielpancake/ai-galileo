@@ -24,7 +24,7 @@ class ChatContext:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        # self.claude_client.delete_conversation(self.chat_id)
+        self.claude_client.delete_conversation(self.chat_id)
         self.chat_id = None
 
 
@@ -50,6 +50,7 @@ def generate_episode(config: dict, theme: str, _id: str) -> dict:
                     ctx.chat_id,
                     timeout=600,
                 ),
+                item,
                 _id,
             )
 
@@ -79,6 +80,8 @@ def parse_story(story_text: str, story_type: str, _id: str) -> list:
     phrases = [phrase.strip() for phrase in phrases]
     phrases = [p for p in phrases if p]
 
+    voice_lines = 0
+
     script = []
     for phrase in phrases:
         # Extract and add actions to script
@@ -101,9 +104,10 @@ def parse_story(story_text: str, story_type: str, _id: str) -> list:
                     "type": "text",
                     "text": phrase,
                     "voice": os.path.abspath(
-                        f"./output/{_id}/{story_type}/v{len(script)}.wav"
+                        f"./output/{_id}/{story_type}/v{voice_lines}.wav"
                     ),
                 }
             )
+            voice_lines += 1
 
     return script
