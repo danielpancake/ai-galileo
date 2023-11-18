@@ -1,5 +1,9 @@
 __pycache__
+.venv
+.vscode
 venv
+logs
+models
+output
 *.wav
 *.mp3
-trim-points.txt

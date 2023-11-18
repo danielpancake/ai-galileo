@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Mapping, Optional, Sequence, Union
 
-from downloader import Downloader
 from espeak_phonemizer import Phonemizer
 
 import numpy as np
@@ -17,6 +16,10 @@ import os
 import json
 import logging
 import wave
+
+from .downloader import Downloader
+
+# TODO: fix this import
 
 
 _LOGGER = logging.getLogger(__name__)

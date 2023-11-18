@@ -1,13 +1,37 @@
+from prettytable import PrettyTable
+
 import os
-import platform
 import re
 
 
-class StatusCodes:
-    ADDED = "added"
-    QUEUED = "queued"
-    COMPLETED = "completed"
-    FAILED = "failed"
+def terminal_get_size() -> tuple:
+    """Get terminal size"""
+    size = os.get_terminal_size()
+    return (size.columns, size.lines)
+
+
+def terminal_run(command: str) -> None:
+    """Run command in terminal."""
+    if os.name == "nt":
+        os.system(f"start cmd /c {command}")
+    else:
+        os.system(f"sh -c {command}")
+
+
+def table_resize(
+    table: PrettyTable, terminal_columns: int, columns_percent: dict
+) -> None:
+    """Resize table to fit terminal size"""
+    # Account for borders and padding
+    columns = terminal_columns
+    columns -= len(table._field_names) + 1
+    columns -= 2 * len(table._field_names) * table._padding_width
+
+    # Set new min width
+    table._min_width = dict(
+        (name, int(columns * percent)) for name, percent in columns_percent.items()
+    )
+    table._max_width = table._min_width
 
 
 def toml_interpolate(string: str, configs: list) -> str:
@@ -32,16 +56,3 @@ def toml_interpolate(string: str, configs: list) -> str:
                 break
 
     return string
-
-
-def run_in_terminal(command: str):
-    """Run command in terminal."""
-    match platform.system():
-        case "Windows":
-            os.system(f"start cmd /c {command}")
-
-        case "Linux":
-            os.system(f"sh -c {command}")
-
-        case _:
-            raise NotImplementedError("Unsupported platform")
