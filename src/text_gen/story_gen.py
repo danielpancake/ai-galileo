@@ -28,7 +28,7 @@ class ChatContext:
         self.chat_id = None
 
 
-def generate_episode(config: dict, theme: str) -> dict:
+def generate_episode(config: dict, theme: str, _id: str) -> dict:
     """Generate an episode from a theme, which includes a story, intro, and outro."""
 
     response = {"theme": theme}
@@ -49,7 +49,8 @@ def generate_episode(config: dict, theme: str) -> dict:
                     prompts[item],
                     ctx.chat_id,
                     timeout=600,
-                )
+                ),
+                _id,
             )
 
             logger.info(f"Succesfully generated {item} for theme {theme}.")
@@ -57,15 +58,20 @@ def generate_episode(config: dict, theme: str) -> dict:
     return response
 
 
-def generate_episode_testonly(config: dict, theme: str) -> dict:
+def generate_episode_testonly(config: dict, theme: str, _id: str) -> dict:
+    """A stub for generate_episode() that doesn't use Claude API. Used for testing."""
     import time
 
     time.sleep(5)
 
-    return {"theme": theme}
+    response = {"theme": theme}
+    for item in ["story", "story_intro", "story_outro"]:
+        response[item] = parse_story("Привет, дорогие друзья!", item, _id)
+
+    return response
 
 
-def parse_story(story_text: str) -> list:
+def parse_story(story_text: str, story_type: str, _id: str) -> list:
     """Parse story text into a list of phrases and actions."""
     phrases = story_text.split("\n\n")  # Extract phrases
 
@@ -75,26 +81,28 @@ def parse_story(story_text: str) -> list:
 
     script = []
     for phrase in phrases:
-        # Extract actions from phrase
+        # Extract and add actions to script
         actions = re.findall(r"\((.*?)\)", phrase)
-
-        # Remove actions from phrase
-        phrase = re.sub(r"\(.*?\)", "", phrase).strip()
-
-        if phrase:
-            script.append(
-                {
-                    "type": "text",
-                    "text": phrase,
-                    "voice": None,
-                }
-            )
-
         for action in actions:
             script.append(
                 {
                     "type": "action",
                     "action": action,
+                }
+            )
+
+        # Remove actions from phrase
+        phrase = re.sub(r"\(.*?\)", "", phrase).strip()
+
+        # Add text to script
+        if phrase:
+            script.append(
+                {
+                    "type": "text",
+                    "text": phrase,
+                    "voice": os.path.abspath(
+                        f"./output/{_id}/{story_type}/v{len(script)}.wav"
+                    ),
                 }
             )
 

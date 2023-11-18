@@ -11,6 +11,7 @@ with Connection():
     qs = sys.argv[1:] or ["default"]
 
     # Preload piper model
+    print("Preloading piper model...")
     init_global_piper_model("ru_RU-pushnoy-medium")
 
     # Use WindowsWorker if on Windows, otherwise use SimpleWorker

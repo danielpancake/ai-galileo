@@ -11,6 +11,7 @@ import os
 import toml
 
 QUEUE_STORIES_BASENAME = "stories"
+QUEUE_PIPER_BASSENAME = "piper"
 
 load_dotenv()
 logger.add("logs/main.log")
@@ -25,10 +26,10 @@ def setup_args():
     parser.add_argument("--clear", help="Clear the database", action="store_true")
     parser.add_argument("--rq-start", help="Run RQ workers", action="store_true")
     parser.add_argument(
-        "--rq-count", help="Number of RQ workers for stories queue", type=int, default=3
+        "--rq-count", help="Number of RQ workers for stories queue", type=int, default=1
     )
     parser.add_argument(
-        "--rq-piper-count", help="Number of RQ workers piper tts", type=int, default=3
+        "--rq-piper-count", help="Number of RQ workers piper tts", type=int, default=1
     )
     parser.add_argument(
         "--yt", help="Start the YouTube chat listener. Requires stream ID", type=str
@@ -85,6 +86,14 @@ if __name__ == "__main__":
         count=args.rq_count,
     )
 
+    # Piper conductor
+    piper_rq_conductor = RQConductor(
+        QUEUE_PIPER_BASSENAME,
+        "piper_worker.py",
+        auto_start=args.rq_start,
+        count=args.rq_piper_count,
+    )
+
     # Clear the database if requested
     if args.clear:
         delete_all = input(
@@ -103,11 +112,12 @@ if __name__ == "__main__":
         UI = AppUI(submission_topics)
 
     while True:
-        # Process newly added topics
+        # Process suggested topics
         for topic in submission_topics.find({"status": StatusCode.SCHEDULED}):
             stories_rq_conductor.enqueue_job(
-                "text_gen.story_gen.generate_episode",
-                args=[director_config, topic["theme"]],
+                "text_gen.story_gen.generate_episode_testonly",
+                # "text_gen.story_gen.generate_episode",
+                args=[director_config, topic["theme"], str(topic["_id"])],
                 job_id=str(topic["_id"]),
                 job_timeout=3600,
             )
@@ -118,6 +128,7 @@ if __name__ == "__main__":
                 {"$set": {"status": StatusCode.IN_PROGRESS_TEXT_GEN}},
             )
 
+        # Process finished episodes and add them to the database
         for _id, result in stories_rq_conductor.update():
             # Update status
             submission_topics.update_one(
@@ -128,7 +139,34 @@ if __name__ == "__main__":
             author = submission_topics.find_one({"_id": _id})["requested_by"]
             result["requested_by"] = author
 
+            # Link id of the suggested topic
+            result["suggested_topic_id"] = _id
+
             # Add to the stories collection
             stories.insert_one(result)
+
+        # Process generated episodes -- add them to the piper queue
+        for topic in submission_topics.find({"status": StatusCode.FINISHED_TEXT_GEN}):
+            episode = stories.find_one({"suggested_topic_id": topic["_id"]})
+
+            piper_rq_conductor.enqueue_job(
+                "voice_gen.inference.voice_episode",
+                args=[episode],
+                job_id=str(episode["_id"]),
+                job_timeout=3600,
+            )
+
+            # Update status
+            submission_topics.update_one(
+                {"_id": topic["_id"]},
+                {"$set": {"status": StatusCode.IN_PROGRESS_VOICE_GEN}},
+            )
+
+        # Process finished episodes
+        for _id, result in piper_rq_conductor.update():
+            # Update status
+            submission_topics.update_one(
+                {"_id": _id}, {"$set": {"status": StatusCode.FINISHED_VOICE_GEN}}
+            )
 
         UI.update()
