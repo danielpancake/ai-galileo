@@ -34,6 +34,7 @@ def setup_args():
     parser.add_argument(
         "--yt", help="Start the YouTube chat listener. Requires stream ID", type=str
     )
+    parser.add_argument("--debug", help="Enable debug mode", action="store_true")
 
     return parser.parse_args()
 
@@ -115,8 +116,9 @@ if __name__ == "__main__":
         # Process suggested topics
         for topic in submission_topics.find({"status": StatusCode.SCHEDULED}):
             stories_rq_conductor.enqueue_job(
-                "text_gen.story_gen.generate_episode_testonly",
-                # "text_gen.story_gen.generate_episode",
+                "text_gen.story_gen.generate_episode_testonly"
+                if args.debug
+                else "text_gen.story_gen.generate_episode",
                 args=[director_config, topic["theme"], str(topic["_id"])],
                 job_id=str(topic["_id"]),
                 job_timeout=3600,
