@@ -1,4 +1,4 @@
-from claude_api import Client
+from dotenv import load_dotenv
 from loguru import logger
 
 from utils import toml_interpolate
@@ -7,25 +7,90 @@ import os
 import re
 
 
-class ChatContext:
-    """Context manager for Claude API. Creates a new chat and deletes it when the context exits."""
+load_dotenv()
 
-    def __init__(self):
-        cookie = os.environ.get("COOKIE")
+PREFERED_TEXT_GEN_API = os.environ.get("PREFERED_TEXT_GEN_API", "").lower()
 
-        if not cookie:
-            raise Exception("No COOKIE env variable provided.")
+# Use Claude API if it's available
+if "claude" in PREFERED_TEXT_GEN_API:
+    from claude_api import Client
 
-        self.claude_client = Client(cookie)
-        self.chat_id = None
+    logger.info("Using Claude API for text generation.")
 
-    def __enter__(self):
-        self.chat_id = self.claude_client.create_new_chat()["uuid"]
-        return self
+    class ChatContext:
+        """Context manager for Claude API. Creates a new chat and deletes it when the context exits."""
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.claude_client.delete_conversation(self.chat_id)
-        self.chat_id = None
+        def __init__(self):
+            cookie = os.environ.get("CLAUDE_API_COOKIE")
+
+            if not cookie:
+                raise Exception("No COOKIE env variable provided.")
+
+            self.claude_client = Client(cookie)
+            self.chat_id = None
+
+        def send_message(self, message: str) -> str:
+            return self.claude_client.send_message(
+                message,
+                self.chat_id,
+                timeout=600,
+            )
+
+        def __enter__(self):
+            self.chat_id = self.claude_client.create_new_chat()["uuid"]
+            return self
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            self.claude_client.delete_conversation(self.chat_id)
+            self.chat_id = None
+
+else:  # Use OpenAI API if Claude API is not available
+    import openai
+
+    logger.info("Using OpenAI API for text generation.")
+
+    class ChatContext:
+        """Context manager for ChatGPT API. Stores messages and responeses."""
+
+        def __init__(self):
+            self.client = None
+            self.messages = []
+
+        def send_message(self, message: str) -> str:
+            # Add user message to history
+            self.messages.append(
+                {
+                    "role": "user",
+                    "content": message,
+                }
+            )
+
+            # Send message to ChatGPT with the current conversation history
+            resp = self.client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=self.messages,
+            )
+            response_text = resp.choices[0].message.content
+
+            # Add response to history
+            self.messages.append(
+                {
+                    "role": "assistant",
+                    "content": response_text,
+                }
+            )
+
+            return response_text
+
+        def __enter__(self):
+            openai.api_key = os.environ.get("OPENAI_API_KEY")
+            self.client = openai.OpenAI()
+
+            return self
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            self.client = None
+            self.messages = []
 
 
 def generate_episode(config: dict, theme: str, _id: str) -> dict:
@@ -35,21 +100,15 @@ def generate_episode(config: dict, theme: str, _id: str) -> dict:
 
     # Form prompts by interpolating TOML strings
     prompts_items = ["story", "story_intro", "story_outro"]
+
     prompts = {}
     for item in prompts_items:
-        prompts[item] = toml_interpolate(
-            config["prompts"][item],
-            [response, config],
-        )
+        prompts[item] = toml_interpolate(config["prompts"][item], [response, config])
 
     with ChatContext() as ctx:
         for item in prompts_items:
             response[item] = parse_story(
-                ctx.claude_client.send_message(
-                    prompts[item],
-                    ctx.chat_id,
-                    timeout=600,
-                ),
+                ctx.send_message(prompts[item]),
                 item,
                 _id,
             )

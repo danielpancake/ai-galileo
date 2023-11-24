@@ -82,7 +82,7 @@ class Piper:
         if noise_w is None:
             noise_w = self.config.noise_w
 
-        phonemes_str = self.phonemizer.phonemize(text)
+        phonemes_str = self.phonemizer.phonemize(text, keep_clause_breakers=True)
         phonemes = [_BOS] + list(phonemes_str)
         phoneme_ids: List[int] = []
 
