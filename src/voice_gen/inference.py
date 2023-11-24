@@ -17,7 +17,7 @@ def init_global_piper_model(model: str):
 def synthesize(
     text: str,
     output_file: str,
-    speech_speed: float = 1.25,
+    speech_speed: float = 1.15,
 ):
     """Synthesize the voice for a line of text"""
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
@@ -34,6 +34,6 @@ def voice_episode(episode: dict):
         for line in episode[sequence_type]:
             if line["type"] == "text":
                 synthesize(
-                    line["text"],
+                    line["text"] + "...",  # Add pause at the end of the line
                     line["voice"],
                 )
