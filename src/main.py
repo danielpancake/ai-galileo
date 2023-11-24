@@ -154,7 +154,7 @@ if __name__ == "__main__":
             piper_rq_conductor.enqueue_job(
                 "voice_gen.inference.voice_episode",
                 args=[episode],
-                job_id=str(episode["_id"]),
+                job_id=str(topic["_id"]),
                 job_timeout=3600,
             )
 
@@ -168,7 +168,8 @@ if __name__ == "__main__":
         for _id, result in piper_rq_conductor.update():
             # Update status
             submission_topics.update_one(
-                {"_id": _id}, {"$set": {"status": StatusCode.FINISHED_VOICE_GEN}}
+                {"_id": _id},
+                {"$set": {"status": StatusCode.FINISHED_VOICE_GEN}},
             )
 
         UI.update()
