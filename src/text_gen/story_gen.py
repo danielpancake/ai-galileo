@@ -163,7 +163,7 @@ def parse_story(story_text: str, story_type: str, _id: str) -> list:
                     "type": "text",
                     "text": phrase,
                     "voice": os.path.abspath(
-                        f"./output/{_id}/{story_type}/v{voice_lines}.wav"
+                        f"./output/{_id}/{story_type}/v{voice_lines}.mp3"
                     ),
                 }
             )

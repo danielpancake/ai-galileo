@@ -131,9 +131,19 @@ class Piper:
 
     def synthesize_and_save(self, text: str, output_file: str, **kwargs):
         """Just decorator for synthesize function and saving it to file"""
-        wav = self.synthesize(text, **kwargs)
+        out = self.synthesize(text, **kwargs)
         with open(output_file, "wb") as file:
-            file.write(wav)
+            if output_file.endswith(".wav"):
+                file.write(out)
+            elif output_file.endswith(".mp3"):
+                import pydub
+                from pydub import AudioSegment
+                from pydub.playback import play
+
+                audio_segment = AudioSegment.from_wav(io.BytesIO(out))
+                audio_segment.export(output_file, format="mp3")
+            else:
+                raise ValueError("Unsupported file format")
 
 
 def load_config(config_path: Union[str, Path]) -> PiperConfig:

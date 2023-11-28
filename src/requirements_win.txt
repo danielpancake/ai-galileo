@@ -38,6 +38,7 @@ protobuf==4.25.1
 pycparser==2.21
 pydantic==2.5.2
 pydantic_core==2.14.5
+pydub==0.25.1
 pymongo==4.6.0
 pyreadline3==3.4.1
 pytchat==0.5.5
