@@ -13,7 +13,9 @@ PREFERED_TEXT_GEN_API = os.environ.get("PREFERED_TEXT_GEN_API", "").lower()
 
 # Use Claude API if it's available
 if "claude" in PREFERED_TEXT_GEN_API:
-    from claude_api import Client
+    from claude_api.client import ClaudeAPIClient
+    from claude_api.session import SessionData
+    from user_agent import generate_user_agent
 
     logger.info("Using Claude API for text generation.")
 
@@ -26,22 +28,19 @@ if "claude" in PREFERED_TEXT_GEN_API:
             if not cookie:
                 raise Exception("No COOKIE env variable provided.")
 
-            self.claude_client = Client(cookie)
+            session = SessionData(cookie, generate_user_agent())
+            self.claude_client = ClaudeAPIClient(session, timeout=240)
             self.chat_id = None
 
         def send_message(self, message: str) -> str:
-            return self.claude_client.send_message(
-                message,
-                self.chat_id,
-                timeout=600,
-            )
+            return self.claude_client.send_message(self.chat_id, message).answer
 
         def __enter__(self):
-            self.chat_id = self.claude_client.create_new_chat()["uuid"]
+            self.chat_id = self.claude_client.create_chat()
             return self
 
         def __exit__(self, exc_type, exc_value, traceback):
-            self.claude_client.delete_conversation(self.chat_id)
+            self.claude_client.delete_chat(self.chat_id)
             self.chat_id = None
 
 else:  # Use OpenAI API if Claude API is not available
