@@ -9,10 +9,11 @@ using UnityEngine.UI;
 public class Model_Story
 {
     public ObjectId _id { set; get; }
+    public ObjectId suggested_topic_id { set; get; }
     public string theme { set; get; }
-    public List<Model_StoryNode> pre_story { set; get; }
+    public List<Model_StoryNode> story_intro { set; get; }
     public List<Model_StoryNode> story { set; get; }
-    public List<Model_StoryNode> post_story { set; get; }
+    public List<Model_StoryNode> story_outro { set; get; }
     public string requested_by { set; get; }
 }
 
@@ -34,7 +35,7 @@ public class Model_StoryNode
 public class MongoViewer : MonoBehaviour
 {
     private const string MONGO_URI = "mongodb://localhost:27017";
-    private const string MONGO_DATABASE = "ai-galileo";
+    private const string MONGO_DATABASE = "ai_galileo";
     private MongoClient client;
     private IMongoDatabase db;
 
@@ -44,7 +45,7 @@ public class MongoViewer : MonoBehaviour
 
     public GameObject pushnoy;
 
-    private int current_story = 1;
+    private int current_story = 0;
     private StoryPart current_story_part = StoryPart.Pre;
     private int current_node = 0;
 
@@ -82,11 +83,11 @@ public class MongoViewer : MonoBehaviour
         {
             default:
             case StoryPart.Pre:
-                return story.pre_story[current_node];
+                return story.story_intro[current_node];
             case StoryPart.Story:
                 return story.story[current_node];
             case StoryPart.Post:
-                return story.post_story[current_node];
+                return story.story_outro[current_node];
         }
     }
 
@@ -130,17 +131,10 @@ public class MongoViewer : MonoBehaviour
                 textMesh.text = node.text;
                 if (node.voice != null)
                 {
-                    WWW www = GetAudioFromFile(node.voice);
-                    StartCoroutine(LoadAndPlay(www));
+                    StartCoroutine(LoadAndPlay(node.voice));
                 }
                 break;
         }
-    }
-
-    private WWW GetAudioFromFile(string filepath)
-    {
-        WWW request = new("file://" + filepath);
-        return request;
     }
 
     private void IncementNode()
@@ -154,13 +148,13 @@ public class MongoViewer : MonoBehaviour
         {
             default:
             case StoryPart.Pre:
-                current_story_part_list = stories[current_story].pre_story;
+                current_story_part_list = stories[current_story].story_intro;
                 break;
             case StoryPart.Story:
                 current_story_part_list = stories[current_story].story;
                 break;
             case StoryPart.Post:
-                current_story_part_list = stories[current_story].post_story;
+                current_story_part_list = stories[current_story].story_outro;
                 break;
         }
 
@@ -193,15 +187,20 @@ public class MongoViewer : MonoBehaviour
         }
     }
 
-    IEnumerator LoadAndPlay(WWW www)
+    IEnumerator LoadAndPlay(string filepath)
     {
+        WWW www = new("file://" + filepath);
         yield return www;
 
-        audioSource.clip = www.GetAudioClip();
-        // audioSource.pitch = 3.0f;
+        while (!www.isDone)
+        {
+            yield return null;
+        }
+
+        audioSource.clip = www.GetAudioClip(false);
         audioSource.Play();
 
-        while (GetComponent<AudioSource>().isPlaying)
+        while (audioSource.isPlaying)
         {
             yield return null;
         }

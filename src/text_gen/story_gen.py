@@ -14,7 +14,7 @@ PREFERED_TEXT_GEN_API = os.environ.get("PREFERED_TEXT_GEN_API", "").lower()
 # Use Claude API if it's available
 if "claude" in PREFERED_TEXT_GEN_API:
     from claude_api.client import ClaudeAPIClient
-    from claude_api.session import SessionData
+    from claude_api.session import SessionData, get_session_data
     from user_agent import generate_user_agent
 
     logger.info("Using Claude API for text generation.")
@@ -26,9 +26,14 @@ if "claude" in PREFERED_TEXT_GEN_API:
             cookie = os.environ.get("CLAUDE_API_COOKIE")
 
             if not cookie:
-                raise Exception("No COOKIE env variable provided.")
+                try:
+                    session = get_session_data()
+                except Exception as e:
+                    logger.error(f"Failed to get session data: {e}")
+                    raise e
+            else:
+                session = SessionData(cookie, generate_user_agent())
 
-            session = SessionData(cookie, generate_user_agent())
             self.claude_client = ClaudeAPIClient(session, timeout=240)
             self.chat_id = None
 

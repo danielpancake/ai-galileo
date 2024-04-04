@@ -62,9 +62,9 @@ class Piper:
         self.model = onnxruntime.InferenceSession(
             str(model_path),
             sess_options=onnxruntime.SessionOptions(),
-            providers=["CPUExecutionProvider"]
-            if not use_cuda
-            else ["CUDAExecutionProvider"],
+            providers=(
+                ["CPUExecutionProvider"] if not use_cuda else ["CUDAExecutionProvider"]
+            ),
         )
 
     def synthesize(
@@ -109,10 +109,12 @@ class Piper:
                 "input": phoneme_ids_array,
                 "input_lengths": phoneme_ids_lengths,
                 "scales": scales,
-                "sid": None
-                if self.config.num_speakers == 1
-                else np.array(
-                    [0 if speaker_id is None else speaker_id], dtype=np.int64
+                "sid": (
+                    None
+                    if self.config.num_speakers == 1
+                    else np.array(
+                        [0 if speaker_id is None else speaker_id], dtype=np.int64
+                    )
                 ),
             },
         )[0].squeeze((0, 1))
@@ -141,7 +143,7 @@ class Piper:
                 from pydub.playback import play
 
                 audio_segment = AudioSegment.from_wav(io.BytesIO(out))
-                audio_segment.export(output_file, format="mp3")
+                audio_segment.export(output_file, format="mp3", bitrate="128k")
             else:
                 raise ValueError("Unsupported file format")
 
