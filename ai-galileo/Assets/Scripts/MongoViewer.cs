@@ -3,8 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using MongoDB.Driver;
 using MongoDB.Bson;
+using UnityEngine.Networking;
+using System;
 using TMPro;
 using UnityEngine.UI;
+using System.IO;
+using System.Net;
+using Random = System.Random;
 
 public class Model_Story
 {
@@ -29,6 +34,7 @@ public class Model_StoryNode
     public string type { set; get; }
     public string voice { set; get; }
     public string action { set; get; }
+    public string image { set; get; }
     public string text { set; get; }
 }
 
@@ -44,6 +50,8 @@ public class MongoViewer : MonoBehaviour
     private AudioSource audioSource;
 
     public GameObject pushnoy;
+    public AudioClip sitcomLaughTrack;
+    public Image image;
 
     private int current_story = 0;
     private StoryPart current_story_part = StoryPart.Pre;
@@ -105,10 +113,21 @@ public class MongoViewer : MonoBehaviour
                     next_text_found = true;
                     break;
 
+                case "image":
+                    StartCoroutine(FindLoadAndShow(node.image));
+
+                    IncementNode();
+                    node = getCurrentNode(story);
+                    break;
+
                 case "action":
                     if (node.action.Contains("прыг"))
                     {
                         pushnoy.GetComponent<Character>().Jump();
+                    }
+                    else if (node.action.Contains("смеяться"))
+                    {
+                        //audioSource.PlayOneShot(sitcomLaughTrack);
                     }
 
                     IncementNode();
@@ -184,6 +203,67 @@ public class MongoViewer : MonoBehaviour
         {
             current_story = 0;
             current_node = 0;
+        }
+    }
+    private string GetHtmlCode(string query)
+    {
+        string url = "https://www.google.com/search?q=" + query + "&tbm=isch";
+        string data = "";
+
+        var request = (HttpWebRequest)WebRequest.Create(url);
+        var response = (HttpWebResponse)request.GetResponse();
+
+        using (Stream dataStream = response.GetResponseStream())
+        {
+            if (dataStream == null)
+                return "";
+            using (var sr = new StreamReader(dataStream))
+            {
+                data = sr.ReadToEnd();
+            }
+        }
+        return data;
+    }
+
+    private List<string> GetUrls(string html)
+    {
+        var urls = new List<string>();
+        int ndx = html.IndexOf("<img", StringComparison.Ordinal);
+
+        while (ndx >= 0)
+        {
+            ndx = html.IndexOf("src=\"", ndx, StringComparison.Ordinal);
+            ndx = ndx + 5;
+            int ndx2 = html.IndexOf("\"", ndx, StringComparison.Ordinal);
+            string url = html.Substring(ndx, ndx2 - ndx);
+            urls.Add(url);
+            ndx = html.IndexOf("<img", ndx, StringComparison.Ordinal);
+        }
+        return urls;
+    }
+
+    IEnumerator FindLoadAndShow(string query)
+    {
+        string html = GetHtmlCode(query);
+        List<string> urls = GetUrls(html);
+
+        Random rnd = new System.Random();
+        int randomUrl = rnd.Next(0, urls.Count - 1);
+
+        UnityWebRequest www = UnityWebRequest.Get(urls[randomUrl]);
+        yield return www.SendWebRequest();
+
+        if (www.isNetworkError || www.isHttpError)
+        {
+            Debug.Log(www.error);
+        }
+        else
+        {
+            Texture2D texture = new Texture2D(2, 2);
+            texture.LoadImage(www.downloadHandler.data);
+            Sprite sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f));
+
+            image.sprite = sprite;
         }
     }
 
