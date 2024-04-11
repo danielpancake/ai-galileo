@@ -125,9 +125,9 @@ public class MongoViewer : MonoBehaviour
                     {
                         pushnoy.GetComponent<Character>().Jump();
                     }
-                    else if (node.action.Contains("смеяться"))
+                    else if (node.action.Contains("смех"))
                     {
-                        //audioSource.PlayOneShot(sitcomLaughTrack);
+                        audioSource.PlayOneShot(sitcomLaughTrack);
                     }
 
                     IncementNode();
@@ -229,8 +229,9 @@ public class MongoViewer : MonoBehaviour
     {
         var urls = new List<string>();
         int ndx = html.IndexOf("<img", StringComparison.Ordinal);
+        int max_tries = 20000;
 
-        while (ndx >= 0)
+        while (ndx >= 0 && max_tries >= 0)
         {
             ndx = html.IndexOf("src=\"", ndx, StringComparison.Ordinal);
             ndx = ndx + 5;
@@ -238,6 +239,7 @@ public class MongoViewer : MonoBehaviour
             string url = html.Substring(ndx, ndx2 - ndx);
             urls.Add(url);
             ndx = html.IndexOf("<img", ndx, StringComparison.Ordinal);
+            max_tries--;
         }
         return urls;
     }
